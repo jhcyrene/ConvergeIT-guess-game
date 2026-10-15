@@ -167,7 +167,7 @@
 
     <!-- ================= UNIVERSAL PREVIEW MODAL ================= -->
     <div id="previewModal"
-        class="hidden fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4 md:p-10 backdrop-blur-sm transition-opacity">
+        class="hidden fixed inset-0 z-50 bg-slate-950/95 flex items-center justify-center p-4 md:p-10 transition-opacity">
         <div class="relative max-w-5xl w-full flex justify-center items-center h-full">
             <button onclick="closeModal()"
                 class="absolute top-4 right-4 md:-top-4 md:-right-4 text-white hover:text-[#00c2cb] text-5xl font-black focus:outline-none transition-colors drop-shadow-md z-50">&times;</button>
@@ -178,9 +178,9 @@
 
             <!-- Text View -->
             <div id="modalTextContainer"
-                class="hidden bg-white w-full max-w-3xl p-8 md:p-16 rounded-3xl shadow-2xl border-8 border-[#002f6c] max-h-[90vh] overflow-y-auto">
+                class="hidden bg-white w-full max-w-3xl p-8 md:p-14 rounded-3xl shadow-2xl border-4 border-[#002f6c] max-h-[90vh] overflow-y-auto">
                 <p id="modalTextContent"
-                    class="text-3xl md:text-5xl font-black text-center text-[#002f6c] leading-tight md:leading-relaxed">
+                    class="text-xl md:text-3xl font-medium text-center text-[#002f6c] leading-relaxed">
                 </p>
             </div>
         </div>
@@ -405,7 +405,7 @@
             }
 
             btn.disabled = true;
-            btn.innerText = "SAVING...";
+            btn.innerText = "SAVING QUESTION...";
             btn.classList.replace('bg-[#00c2cb]', 'bg-gray-400');
 
             const formData = new FormData();
@@ -417,25 +417,26 @@
                 const response = await fetch('/api/upload?true=true', { method: 'POST', body: formData });
                 if (response.ok) {
                     document.getElementById('textQuestionInput').value = '';
-                    btn.innerText = "SUCCESS!";
-                    btn.classList.replace('bg-gray-400', 'bg-green-500');
+                    btn.innerText = "QUESTION SAVED!";
+                    btn.classList.replace('bg-gray-400', 'bg-green-600');
                     loadUploadedData();
                 } else {
-                    alert("Failed to save text question to server.");
-                    btn.innerText = "ERROR";
+                    const errData = await response.json().catch(() => ({}));
+                    alert(errData.error || "Failed to save text question to server.");
+                    btn.innerText = "ERROR SAVING";
                     btn.classList.replace('bg-gray-400', 'bg-red-500');
                 }
             } catch (error) {
-                console.error(error);
+                console.error("Save error:", error);
                 alert("Network error. Could not connect to server.");
-                btn.innerText = "ERROR";
+                btn.innerText = "NETWORK ERROR";
                 btn.classList.replace('bg-gray-400', 'bg-red-500');
             }
 
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = "SAVE TEXT QUESTION";
-                btn.classList.remove('bg-gray-400', 'bg-green-500', 'bg-red-500');
+                btn.classList.remove('bg-gray-400', 'bg-green-500', 'bg-green-600', 'bg-red-500');
                 btn.classList.add('bg-[#00c2cb]');
             }, 2000);
         });
@@ -445,54 +446,65 @@
         // Fetch and render data
         function loadUploadedData() {
             fetch('/api/data')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error("HTTP " + response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    document.getElementById('count').innerText = data.length;
+                    const countElem = document.getElementById('count');
                     const historyBody = document.getElementById('historyTableBody');
+                    if (!historyBody) return;
+
+                    const list = Array.isArray(data) ? data : [];
+                    if (countElem) countElem.innerText = list.length;
                     historyBody.innerHTML = '';
 
-                    if (data.length === 0) {
+                    if (list.length === 0) {
                         historyBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500 italic font-medium">No entries currently in database.</td></tr>`;
                         return;
                     }
 
-                    // Render newest first
-                    data.reverse().forEach(item => {
+                    // Render newest first (clone with slice to avoid mutating array)
+                    list.slice().reverse().forEach(item => {
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-blue-50 transition-colors group";
 
                         let previewHtml = '';
                         let contentDisplay = '';
-                        let isText = item.type === 'text';
+                        let encodedContent = '';
+                        let isText = item.type === 'text' || (!item.url && !item.filename && Boolean(item.text_content || item.content || item.text));
 
                         if (isText) {
-                            const textContent = item.text_content || item.content || '';
+                            const textContent = item.text_content || item.content || item.text || '';
                             const safeTextContent = escapeHtml(textContent);
-                            const encodedContent = encodeURIComponent(textContent).replace(/'/g, '%27');
+                            encodedContent = encodeURIComponent(textContent).replace(/'/g, '%27');
                             previewHtml = `
                                 <div class="mx-auto h-12 w-16 bg-blue-100 border border-blue-300 rounded-md flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors shadow-sm" onclick="openModal('text', '${encodedContent}')" title="Preview Text">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#002f6c]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                 </div>`;
                             contentDisplay = `
                                 <div class="flex items-center">
-                                    <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase mr-2">Text</span>
-                                    <div class="truncate max-w-[250px] md:max-w-[400px] text-gray-700 font-medium italic" title="${safeTextContent}">"${safeTextContent}"</div>
+                                    <span class="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded uppercase mr-2">Text</span>
+                                    <div class="truncate max-w-[250px] md:max-w-[400px] text-gray-700 font-normal italic" title="${safeTextContent}">"${safeTextContent}"</div>
                                 </div>`;
                         } else {
                             // Image Type
+                            const filename = escapeHtml(item.filename || 'Image File');
+                            const imgUrl = escapeHtml(item.url || '');
                             previewHtml = `
-                                <div class="mx-auto h-12 w-16 bg-gray-200 rounded-md overflow-hidden shadow-sm cursor-pointer border border-gray-300 hover:border-[#00c2cb]" onclick="openModal('image', '${item.url}')" title="Preview Image">
-                                    <img src="${item.url}" class="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" alt="preview">
+                                <div class="mx-auto h-12 w-16 bg-gray-200 rounded-md overflow-hidden shadow-sm cursor-pointer border border-gray-300 hover:border-[#00c2cb]" onclick="openModal('image', '${imgUrl}')" title="Preview Image">
+                                    <img src="${imgUrl}" class="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" alt="preview">
                                 </div>`;
                             contentDisplay = `
                                 <div class="flex items-center">
                                     <span class="bg-gray-200 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase mr-2">Img</span>
-                                    <div class="truncate max-w-[200px] md:max-w-[300px] font-semibold text-gray-800" title="${item.filename}">${item.filename}</div>
+                                    <div class="truncate max-w-[200px] md:max-w-[300px] font-semibold text-gray-800" title="${filename}">${filename}</div>
                                 </div>`;
                         }
 
                         // Determine select colors based on current DB state
-                        const selectColorClass = item.is_ai ? 'bg-teal-50 border-teal-200 text-teal-800' : 'bg-blue-50 border-blue-200 text-blue-800';
+                        const isAi = Boolean(item.is_ai);
+                        const selectColorClass = isAi ? 'bg-teal-50 border-teal-200 text-teal-800' : 'bg-blue-50 border-blue-200 text-blue-800';
 
                         tr.innerHTML = `
                             <td class="p-2 text-center align-middle border-b border-gray-100">
@@ -504,8 +516,8 @@
                             <td class="p-3 align-middle border-b border-gray-100 text-center">
                                 <!-- CHANGE ANSWER DROPDOWN -->
                                 <select onchange="updateAnswer('${item.id}', this.value, this)" class="inline-block w-3/4 px-2 py-1.5 text-sm font-bold border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00c2cb] cursor-pointer transition-colors ${selectColorClass}">
-                                    <option value="false" ${!item.is_ai ? 'selected' : ''}>Real</option>
-                                    <option value="true" ${item.is_ai ? 'selected' : ''}>AI</option>
+                                    <option value="false" ${!isAi ? 'selected' : ''}>Real</option>
+                                    <option value="true" ${isAi ? 'selected' : ''}>AI</option>
                                 </select>
                             </td>
                             <td class="p-3 text-center align-middle border-b border-gray-100 whitespace-nowrap">

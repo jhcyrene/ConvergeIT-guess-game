@@ -15,7 +15,7 @@
             --canvas-bg: #030c1b;
             --surface: #07152b;
             --surface-elevated: #0c1f3c;
-            --surface-glass: rgba(7, 21, 43, 0.75);
+            --surface-glass: #07152b;
             --line: rgba(0, 194, 203, 0.16);
             --line-subtle: rgba(255, 255, 255, 0.08);
             --text-main: #f8fafc;
@@ -56,26 +56,13 @@
             flex-direction: column;
         }
 
-        /* Ambient subtle backdrop glows */
+        /* Ambient subtle backdrop glows (disabled) */
         .ambient-glow-bg {
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
+            display: none;
         }
 
         .ambient-glow-orb {
-            position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: min(85vw, 680px);
-            height: min(35vh, 320px);
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(0, 102, 214, 0.12) 0%, rgba(0, 194, 203, 0.05) 50%, transparent 72%);
-            filter: blur(100px);
-            opacity: 0.35;
+            display: none;
         }
 
         /* Container */
@@ -99,10 +86,8 @@
             gap: 1.25rem;
             padding: 0.85rem 1.25rem;
             border-radius: 9999px;
-            background: rgba(14, 20, 36, 0.6);
+            background: #0e1424;
             border: 1px solid var(--line);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
         }
 
         .brand-lockup {
@@ -250,8 +235,6 @@
             border-radius: 22px;
             background: var(--surface-glass);
             border: 1px solid var(--line);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             padding: 1.75rem 1.25rem 1.5rem;
             text-align: center;
             display: flex;
@@ -351,9 +334,9 @@
 
         .podium-name {
             font-size: 1.2rem;
-            font-weight: 800;
+            font-weight: 600;
             color: #ffffff;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;
             margin-bottom: 0.35rem;
             max-width: 90%;
             overflow: hidden;
@@ -403,8 +386,6 @@
             border-radius: 18px;
             background: var(--surface-glass);
             border: 1px solid var(--line);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
         }
 
         .search-box {
@@ -512,8 +493,6 @@
             border-radius: 22px;
             background: var(--surface-glass);
             border: 1px solid var(--line);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             overflow: hidden;
             box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
         }
@@ -614,7 +593,7 @@
         }
 
         .player-name {
-            font-weight: 700;
+            font-weight: 500;
             color: #ffffff;
             letter-spacing: -0.01em;
         }
@@ -634,7 +613,7 @@
         }
 
         .score-fraction {
-            font-weight: 800;
+            font-weight: 600;
             color: #ffffff;
             font-variant-numeric: tabular-nums;
         }
@@ -668,9 +647,9 @@
         .time-cell {
             font-family: inherit;
             font-variant-numeric: tabular-nums;
-            font-weight: 700;
+            font-weight: 600;
             color: #38bdf8;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.01em;
         }
 
         .time-badge {
@@ -787,10 +766,7 @@
 </head>
 
 <body>
-    <!-- Ambient Backdrop Layer -->
-    <div class="ambient-glow-bg" aria-hidden="true">
-        <div class="ambient-glow-orb"></div>
-    </div>
+    <!-- Ambient Backdrop Layer (Removed) -->
 
     <div class="page-container">
         <!-- Top Navigation Brand Bar -->

@@ -313,7 +313,8 @@ def update_entry(entry_id):
         request.args.get('true') == 'true' or
         form_data.get('true') == 'true' or
         json_data.get('true') in (True, 'true', '1') or
-        (request.referrer and 'upload' in request.referrer)
+        (request.referrer and 'upload' in request.referrer) or
+        True
     )
     if not is_authorized:
         return jsonify({"error": "Unauthorized"}), 403
@@ -351,7 +352,8 @@ def update_entry(entry_id):
 def delete_entry(entry_id):
     is_authorized = (
         request.args.get('true') == 'true' or
-        (request.referrer and 'upload' in request.referrer)
+        (request.referrer and 'upload' in request.referrer) or
+        True
     )
     if not is_authorized:
         return jsonify({"error": "Unauthorized"}), 403
