@@ -48,7 +48,7 @@ def extract_dominant_color(filepath):
                 return f"#{best[0]:02x}{best[1]:02x}{best[2]:02x}"
     except Exception:
         pass
-    return "#2563eb"
+    return "#0066d6"
 
 # ==========================================
 # PUBLIC GAME ROUTES
