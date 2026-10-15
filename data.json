@@ -564,5 +564,13 @@
         "filename": "e127d99b.jpg",
         "url": "/static/images/e127d99b.jpg",
         "dominant_color": "#8fbce2"
+    },
+    {
+        "id": "e362f98e-3db7-4c4d-8245-fcdd474231e5",
+        "type": "image",
+        "is_ai": false,
+        "filename": "6b3d1b89.mp4",
+        "url": "/static/images/6b3d1b89.mp4",
+        "dominant_color": "#0066d6"
     }
 ]

@@ -291,7 +291,7 @@
         .flank-preview img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center;
             opacity: 0.45;
             filter: brightness(0.4) saturate(0.85);
@@ -351,10 +351,15 @@
             opacity: 0.6;
         }
 
-        /* The Hero Card Component (Clean Uninterrupted Artwork) */
+        /* The Hero Card Component (Adaptive to Resolution, Zero Cropping) */
         .card {
             position: absolute;
             inset: 0;
+            margin: auto;
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -362,7 +367,7 @@
             border: 1.5px solid rgba(255, 255, 255, 0.16);
             background: #0d121f;
             box-shadow: var(--card-shadow), 0 0 40px -6px rgba(var(--ambient-rgb, 37, 99, 235), 0.22);
-            transition: transform 0.32s cubic-bezier(0.18, 0.89, 0.32, 1.2), opacity 0.3s ease, box-shadow 0.8s ease;
+            transition: transform 0.32s cubic-bezier(0.18, 0.89, 0.32, 1.2), opacity 0.3s ease, width 0.25s ease, height 0.25s ease, box-shadow 0.8s ease;
             touch-action: none;
             cursor: grab;
             user-select: none;
@@ -379,13 +384,16 @@
             cursor: grabbing;
         }
 
-        /* Full Bleed Card Media Area */
+        /* Adaptive Card Media Area (Full Viewport, Zero Cropping) */
         .card-media-wrap {
             position: relative;
             flex: 1;
             min-height: 0;
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
             background: #070912;
         }
@@ -394,7 +402,9 @@
             display: block;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             object-position: center;
             pointer-events: none;
             transition: transform 0.4s ease;
@@ -470,16 +480,17 @@
 
         .overlay-ai span,
         .overlay-real span {
-            padding: 0.6rem 1.4rem;
+            padding: 0.5rem 1.2rem;
             border: 2.5px solid #ffffff;
             border-radius: 12px;
             color: #ffffff;
-            font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+            font-size: clamp(1.1rem, 2.8vw, 2.2rem);
             font-weight: 900;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
         }
 
         /* Bottom Action Dock (Clean Dual Choice Buttons) */
@@ -1497,6 +1508,48 @@
             }
         }
 
+        function adaptCardToImage(card, img) {
+            if (!card || !img) return;
+            const nw = img.naturalWidth;
+            const nh = img.naturalHeight;
+            if (!nw || !nh) return;
+
+            const ratio = nw / nh;
+            card.dataset.aspectRatio = ratio.toString();
+            card.style.aspectRatio = `${nw} / ${nh}`;
+            updateCardSize(card);
+        }
+
+        function updateCardSize(card) {
+            if (!card || !container) return;
+            const ratioStr = card.dataset.aspectRatio;
+            if (!ratioStr) return;
+            const imageRatio = parseFloat(ratioStr);
+            if (!imageRatio || isNaN(imageRatio)) return;
+
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            if (!cw || !ch) return;
+
+            const containerRatio = cw / ch;
+
+            if (imageRatio > containerRatio) {
+                // Wide / Landscape: width fills container, height is proportional to aspect ratio
+                card.style.width = '100%';
+                card.style.height = `${Math.min(ch, Math.round(cw / imageRatio))}px`;
+            } else {
+                // Tall / Portrait / Square: height fills container, width is proportional to aspect ratio
+                card.style.height = '100%';
+                card.style.width = `${Math.min(cw, Math.round(ch * imageRatio))}px`;
+            }
+        }
+
+        function updateAllCardSizes() {
+            document.querySelectorAll('.card').forEach(card => {
+                updateCardSize(card);
+            });
+        }
+
         function renderCards() {
             container.querySelectorAll('.card').forEach(c => c.remove());
 
@@ -1516,6 +1569,9 @@
                 const isText = q.type === 'text' || (!q.url && (q.text_content || q.content || q.text));
 
                 if (isText) {
+                    card.dataset.aspectRatio = "1.35";
+                    updateCardSize(card);
+
                     const textPanel = document.createElement('div');
                     textPanel.className = 'question-text-panel';
 
@@ -1546,6 +1602,16 @@
                     }
                     image.alt = `Challenge image #${i + 1}`;
                     image.draggable = false;
+
+                    const onImgLoad = () => {
+                        adaptCardToImage(card, image);
+                    };
+
+                    if (image.complete && image.naturalWidth > 0) {
+                        onImgLoad();
+                    } else {
+                        image.addEventListener('load', onImgLoad);
+                    }
 
                     mediaWrap.appendChild(image);
                     card.appendChild(mediaWrap);
@@ -1689,8 +1755,13 @@
                         c.style.transform = `scale(${1 - stackLevel * 0.025}) translateY(${stackLevel * 8}px)`;
                         c.style.visibility = idx < 3 ? 'visible' : 'hidden';
                         const image = c.querySelector('.card-media-wrap img');
-                        if (idx < 3 && image && image.dataset.src && !image.hasAttribute('src')) {
-                            image.src = image.dataset.src;
+                        if (idx < 3 && image) {
+                            if (image.dataset.src && !image.hasAttribute('src')) {
+                                image.src = image.dataset.src;
+                            }
+                            if (image.complete && image.naturalWidth > 0) {
+                                adaptCardToImage(c, image);
+                            }
                         }
                     });
 
@@ -1699,7 +1770,10 @@
                         const z = parseInt(c.style.zIndex || 0);
                         if (z > nextMaxZ) { nextMaxZ = z; nextTop = c; }
                     });
-                    if (nextTop) attachDragEvents(nextTop);
+                    if (nextTop) {
+                        updateCardSize(nextTop);
+                        attachDragEvents(nextTop);
+                    }
 
                     updateProgress();
                     updateFlankPreviews();
@@ -1851,6 +1925,11 @@
                     }
                 });
         };
+
+        window.addEventListener('resize', updateAllCardSizes);
+        if (window.ResizeObserver && container) {
+            new ResizeObserver(updateAllCardSizes).observe(container);
+        }
     </script>
 </body>
 
