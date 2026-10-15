@@ -1,0 +1,58 @@
+[
+    {
+        "id": "f422921d-d487-4e28-9f5a-7aee54f8e6e8",
+        "type": "image",
+        "is_ai": true,
+        "filename": "c1e9ab32.png",
+        "url": "/static/images/c1e9ab32.png",
+        "dominant_color": "#2563eb"
+    },
+    {
+        "id": "03e38f68-cfc7-45cf-9b1a-45facdd35f5e",
+        "type": "image",
+        "is_ai": true,
+        "filename": "08f34ebb.png",
+        "url": "/static/images/08f34ebb.png",
+        "dominant_color": "#0284c7"
+    },
+    {
+        "id": "70ead6b4-58fd-4a18-8828-ba055eb379f9",
+        "type": "image",
+        "is_ai": false,
+        "filename": "f791b9a0.webp",
+        "url": "/static/images/f791b9a0.webp",
+        "dominant_color": "#0d9488"
+    },
+    {
+        "id": "eb044033-7762-4a9c-9f73-1e0721b071dc",
+        "type": "image",
+        "is_ai": true,
+        "filename": "8a3dc6bd.webp",
+        "url": "/static/images/8a3dc6bd.webp",
+        "dominant_color": "#6366f1"
+    },
+    {
+        "id": "e4ef9694-0244-4cfd-b4e4-f7f18dff5f07",
+        "type": "image",
+        "is_ai": false,
+        "filename": "f02b4d1c.jpg",
+        "url": "/static/images/f02b4d1c.jpg",
+        "dominant_color": "#0369a1"
+    },
+    {
+        "id": "69c5855c-9178-4d0f-b14c-a3f7e35c3279",
+        "type": "image",
+        "is_ai": true,
+        "filename": "d6a9ffd3.jpg",
+        "url": "/static/images/d6a9ffd3.jpg",
+        "dominant_color": "#4f46e5"
+    },
+    {
+        "id": "8c3c9ae1-ca14-46d6-b51d-eb4e9fc34052",
+        "type": "image",
+        "is_ai": true,
+        "filename": "e4714e66.jpg",
+        "url": "/static/images/e4714e66.jpg",
+        "dominant_color": "#1d4ed8"
+    }
+]
