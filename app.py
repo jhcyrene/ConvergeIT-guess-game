@@ -382,5 +382,4 @@ def delete_entry(entry_id):
         return jsonify({"error": "Not found"}), 404
 
 if __name__ == '__main__':
-    # You can now run everything simultaneously on one port
-    app.run(debug=True, port=5001)
+    app.run(debug=False, port=5001)
