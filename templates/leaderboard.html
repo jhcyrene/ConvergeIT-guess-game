@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard · ConvergeIT 2026 AI Challenge</title>
+
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            color-scheme: dark;
+            --canvas-bg: #070a12;
+            --surface: #0e1424;
+            --surface-elevated: #151f38;
+            --surface-glass: rgba(14, 20, 36, 0.72);
+            --line: rgba(255, 255, 255, 0.12);
+            --line-subtle: rgba(255, 255, 255, 0.07);
+            --text-main: #f8fafc;
+            --text-secondary: rgba(248, 250, 252, 0.75);
+            --text-muted: rgba(248, 250, 252, 0.48);
+
+            /* Theme Accents (Cobalt & Cyan) */
+            --accent-blue-main: #2563eb;
+            --accent-blue-hover: #3b82f6;
+            --accent-cyan: #38bdf8;
+            --accent-cyan-rgb: 56, 189, 248;
+            --accent-gold: #fbbf24;
+            --accent-silver: #cbd5e1;
+            --accent-bronze: #fb923c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background-color: var(--canvas-bg);
+            background-image:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37, 99, 235, 0.22) 0%, rgba(10, 16, 32, 0.95) 60%, #05070f 100%),
+                radial-gradient(circle at 85% 90%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 15% 90%, rgba(37, 99, 235, 0.08) 0%, transparent 50%);
+            background-attachment: fixed;
+            font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ambient subtle backdrop glows */
+        .ambient-glow-bg {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .ambient-glow-orb {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(90vw, 800px);
+            height: min(40vh, 400px);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.22) 0%, rgba(56, 189, 248, 0.1) 45%, transparent 70%);
+            filter: blur(80px);
+            opacity: 0.6;
+        }
+
+        /* Container */
+        .page-container {
+            position: relative;
+            z-index: 1;
+            width: min(94%, 1160px);
+            margin: 0 auto;
+            padding: 1.5rem 0 3.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        /* Brand Navigation Header */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 9999px;
+            background: rgba(14, 20, 36, 0.6);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .brand-lockup {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-marks {
+            display: flex;
+            align-items: center;
+            gap: -0.4rem;
+        }
+
+        .brand-mark {
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            object-fit: cover;
+            transition: transform 0.25s ease;
+        }
+
+        .brand-mark:last-child {
+            margin-left: -0.65rem;
+        }
+
+        .brand-lockup:hover .brand-mark {
+            transform: scale(1.05);
+        }
+
+        .brand-text-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-play {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1.35rem;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            border: 0;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            transition: all 0.22s ease;
+        }
+
+        .btn-play:hover {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-play:active {
+            transform: translateY(0);
+        }
+
+        /* Hero / Title Section */
+        .hero-banner {
+            text-align: center;
+            padding: 1.2rem 0 0.5rem;
+        }
+
+        .hero-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.95rem;
+            border-radius: 9999px;
+            background: rgba(37, 99, 235, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: var(--accent-cyan);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 0.85rem;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.4rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin-bottom: 0.65rem;
+        }
+
+        .hero-title span {
+            background: linear-gradient(135deg, #60a5fa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 54ch;
+            margin: 0 auto;
+            line-height: 1.55;
+        }
+
+        /* Top 3 Podium Cards */
+        .podium-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            align-items: end;
+            margin-top: 0.5rem;
+        }
+
+        .podium-card {
+            position: relative;
+            border-radius: 22px;
+            background: var(--surface-glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 1.75rem 1.25rem 1.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+        }
+
+        .podium-card:hover {
+            transform: translateY(-4px);
+        }
+
+        /* Rank 1 (Center, Higher & Gold) */
+        .podium-card.rank-1 {
+            order: 2;
+            padding-top: 2.2rem;
+            padding-bottom: 1.85rem;
+            border-color: rgba(251, 191, 36, 0.45);
+            background: linear-gradient(180deg, rgba(251, 191, 36, 0.08) 0%, rgba(14, 20, 36, 0.85) 60%);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(251, 191, 36, 0.12);
+        }
+
+        .podium-card.rank-1:hover {
+            border-color: rgba(251, 191, 36, 0.7);
+        }
+
+        /* Rank 2 (Left & Silver) */
+        .podium-card.rank-2 {
+            order: 1;
+            border-color: rgba(203, 213, 225, 0.35);
+            background: linear-gradient(180deg, rgba(203, 213, 225, 0.06) 0%, rgba(14, 20, 36, 0.8) 60%);
+        }
+
+        /* Rank 3 (Right & Bronze) */
+        .podium-card.rank-3 {
+            order: 3;
+            border-color: rgba(251, 146, 60, 0.35);
+            background: linear-gradient(180deg, rgba(251, 146, 60, 0.06) 0%, rgba(14, 20, 36, 0.8) 60%);
+        }
+
+        .podium-badge {
+            position: absolute;
+            top: -1.2rem;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+            font-weight: 900;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .rank-1 .podium-badge {
+            width: 2.85rem;
+            height: 2.85rem;
+            font-size: 1.45rem;
+            background: #d97706;
+            border-color: #fef3c7;
+            top: -1.45rem;
+        }
+
+        .rank-2 .podium-badge {
+            background: #64748b;
+            border-color: #f1f5f9;
+        }
+
+        .rank-3 .podium-badge {
+            background: #b45309;
+            border-color: #fed7aa;
+        }
+
+        .podium-avatar {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 2px solid var(--line);
+            display: grid;
+            place-items: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .rank-1 .podium-avatar {
+            width: 4.75rem;
+            height: 4.75rem;
+            font-size: 1.85rem;
+            border-color: rgba(251, 191, 36, 0.6);
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        .podium-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.35rem;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .rank-1 .podium-name {
+            font-size: 1.35rem;
+        }
+
+        .podium-score-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+
+            color: #38bdf8;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 0.65rem;
+        }
+
+        .podium-time {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+
+        .podium-time svg {
+            color: var(--text-muted);
+        }
+
+        /* Controls / Filter Bar */
+        .controls-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem 1.35rem;
+            border-radius: 18px;
+            background: var(--surface-glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+            max-width: 420px;
+        }
+
+        .search-box svg {
+            position: absolute;
+            left: 0.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 2.75rem;
+            padding: 0 1rem 0 2.6rem;
+            border-radius: 9999px;
+            background: rgba(7, 10, 18, 0.6);
+            border: 1px solid var(--line);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue-hover);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+            background: rgba(7, 10, 18, 0.85);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .stats-chips {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--line-subtle);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-chip strong {
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn-refresh {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            height: 2.75rem;
+            padding: 0 1.15rem;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--line);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .btn-refresh.spinning svg {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Leaderboard Table / Card List */
+        .board-container {
+            border-radius: 22px;
+            background: var(--surface-glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            overflow: hidden;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+        }
+
+        .board-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .board-table th {
+            padding: 1rem 1.25rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--line);
+            background: rgba(7, 10, 18, 0.45);
+        }
+
+        .board-table td {
+            padding: 1.05rem 1.25rem;
+            border-bottom: 1px solid var(--line-subtle);
+            font-size: 0.95rem;
+            color: var(--text-main);
+            vertical-align: middle;
+            transition: background 0.15s ease;
+        }
+
+        .board-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .board-table tbody tr:hover td {
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        /* Rank Badge */
+        .rank-cell {
+            width: 5rem;
+        }
+
+        .rank-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 800;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--line);
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .rank-pill.gold {
+            background: rgba(251, 191, 36, 0.18);
+            border-color: rgba(251, 191, 36, 0.55);
+            color: #fbbf24;
+            box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+        }
+
+        .rank-pill.silver {
+            background: rgba(203, 213, 225, 0.18);
+            border-color: rgba(203, 213, 225, 0.55);
+            color: #e2e8f0;
+        }
+
+        .rank-pill.bronze {
+            background: rgba(251, 146, 60, 0.18);
+            border-color: rgba(251, 146, 60, 0.55);
+            color: #fb923c;
+        }
+
+        /* Player Details */
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .player-avatar {
+            width: 2.35rem;
+            height: 2.35rem;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--line);
+            display: grid;
+            place-items: center;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .player-name {
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+        }
+
+        /* Accuracy & Score Cell */
+        .score-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            min-width: 140px;
+        }
+
+        .score-headline {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .score-fraction {
+            font-weight: 800;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .accuracy-badge {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 0.18rem 0.5rem;
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.14);
+            color: var(--accent-cyan);
+            border: none;
+        }
+
+        .score-track {
+            width: 100%;
+            max-width: 160px;
+            height: 5px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+        }
+
+        /* Time Cell */
+        .time-cell {
+            font-family: inherit;
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 0.02em;
+        }
+
+        .time-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0;
+            background: transparent;
+            border: none;
+        }
+
+        /* Empty / Loading State */
+        .empty-state,
+        .loading-state {
+            padding: 4rem 1.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state h3,
+        .loading-state h3 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .empty-state p {
+            max-width: 40ch;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 2.75rem;
+            height: 2.75rem;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Footer */
+        .site-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--line-subtle);
+            padding: 1.75rem 0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .site-footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 860px) {
+            .podium-section {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .podium-card.rank-1 {
+                order: 1;
+            }
+
+            .podium-card.rank-2 {
+                order: 2;
+            }
+
+            .podium-card.rank-3 {
+                order: 3;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .brand-header {
+                padding: 0.65rem 0.95rem;
+            }
+
+            .brand-subtitle {
+                display: none;
+            }
+
+            .controls-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .board-table th,
+            .board-table td {
+                padding: 0.85rem 0.75rem;
+            }
+
+            .score-track {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient Backdrop Layer -->
+    <div class="ambient-glow-bg" aria-hidden="true">
+        <div class="ambient-glow-orb"></div>
+    </div>
+
+    <div class="page-container">
+        <!-- Top Navigation Brand Bar -->
+        <header class="brand-header">
+            <a href="/" class="brand-lockup" title="Return to ConvergeIT Game">
+                <div class="brand-marks">
+                    <img src="{{ url_for('static', filename='assets/convlogo.png') }}" alt="ConvergeIT 2026"
+                        class="brand-mark">
+                    <img src="{{ url_for('static', filename='assets/jpcs.png') }}" alt="JPCS Lipa Chapter"
+                        class="brand-mark">
+                </div>
+                <div class="brand-text-block">
+                    <span class="brand-title">ConvergeIT 2026</span>
+                    <span class="brand-subtitle">Spot the AI Image</span>
+                </div>
+            </a>
+
+            <div class="header-actions">
+                <a href="/" class="btn-play">
+                    <span>Play Challenge</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- Hero Title Banner -->
+        <section class="hero-banner">
+            <h1 class="hero-title">Challenge <span>Leaderboard</span></h1>
+            <p class="hero-desc">The sharpest human minds who distinguished synthetic artifacts from reality. Ranked by
+                highest score and lightning-fast completion time.</p>
+        </section>
+
+        <!-- Top 3 Podium Highlights -->
+        <section class="podium-section" id="podium-section" style="display: none;">
+            <!-- Rank 2 Podium Card -->
+            <div class="podium-card rank-2" id="podium-card-2">
+                <div class="podium-badge">🥈</div>
+                <div class="podium-avatar" id="podium-avatar-2">2</div>
+                <h3 class="podium-name" id="podium-name-2">Player 2</h3>
+                <div class="podium-score-pill" id="podium-score-2">-- / --</div>
+                <div class="podium-time" id="podium-time-2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>--:--.---</span>
+                </div>
+            </div>
+
+            <!-- Rank 1 Champion Card (Center) -->
+            <div class="podium-card rank-1" id="podium-card-1">
+                <div class="podium-badge">👑</div>
+                <div class="podium-avatar" id="podium-avatar-1">1</div>
+                <h3 class="podium-name" id="podium-name-1">Champion</h3>
+                <div class="podium-score-pill" id="podium-score-1">-- / --</div>
+                <div class="podium-time" id="podium-time-1">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>--:--.---</span>
+                </div>
+            </div>
+
+            <!-- Rank 3 Podium Card -->
+            <div class="podium-card rank-3" id="podium-card-3">
+                <div class="podium-badge">🥉</div>
+                <div class="podium-avatar" id="podium-avatar-3">3</div>
+                <h3 class="podium-name" id="podium-name-3">Player 3</h3>
+                <div class="podium-score-pill" id="podium-score-3">-- / --</div>
+                <div class="podium-time" id="podium-time-3">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>--:--.---</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Bar: Search & Stats -->
+        <section class="controls-card">
+            <div class="search-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="player-search" class="search-input" placeholder="Search by student name…"
+                    autocomplete="off">
+            </div>
+
+            <div class="stats-chips">
+                <div class="stat-chip">
+                    Total Players: <strong id="total-challengers-count">0</strong>
+                </div>
+                <div class="stat-chip">
+                    Top Score: <strong id="top-score-value">--</strong>
+                </div>
+                <button id="refresh-btn" class="btn-refresh" onclick="fetchLeaderboard(true)"
+                    title="Reload latest scores">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Leaderboard Table Container -->
+        <main class="board-container">
+            <table class="board-table" id="leaderboard-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th class="rank-cell">Rank</th>
+                        <th>Challenger</th>
+                        <th>Score & Accuracy</th>
+                        <th>Time Completed</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Populated dynamically via JS -->
+                </tbody>
+            </table>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="loading-state">
+                <div class="loading-spinner"></div>
+                <h3>Loading Hall of Fame…</h3>
+                <p>Retrieving verified student scores from the database.</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                    stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-cyan);"
+                    aria-hidden="true">
+                    <circle cx="12" cy="8" r="7"></circle>
+                    <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                </svg>
+                <h3>No Challenge Records Yet</h3>
+                <p>Be the very first player to test your human intuition and claim the #1 spot on the leaderboard!</p>
+                <a href="/" class="btn-play" style="margin-top: 0.5rem;">Take the Challenge</a>
+            </div>
+
+            <!-- No Search Matches -->
+            <div id="no-search-state" class="empty-state" style="display: none;">
+                <h3>No Matching Challengers Found</h3>
+                <p>Try searching for a different handle or clear your search query.</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="site-footer">
+            <p>ConvergeIT 2026 · JPCS Lipa Chapter</p>
+        </footer>
+    </div>
+
+    <!-- Client-Side Leaderboard Logic -->
+    <script>
+        let allScores = [];
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatDisplayTime(entry) {
+            if (entry.time && entry.time !== '00:00.000' && entry.time !== '00:00') {
+                return entry.time;
+            }
+            if (entry.time_ms && !isNaN(entry.time_ms)) {
+                const totalSeconds = Math.floor(entry.time_ms / 1000);
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const milliseconds = entry.time_ms % 1000;
+                return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+            }
+            return '--:--';
+        }
+
+        async function fetchLeaderboard(isManualRefresh = false) {
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (isManualRefresh && refreshBtn) {
+                refreshBtn.classList.add('spinning');
+            }
+
+            try {
+                const res = await fetch('/api/scores?t=' + Date.now());
+                if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                const data = await res.json();
+                allScores = Array.isArray(data) ? data : [];
+                renderBoard(allScores);
+            } catch (err) {
+                console.error("Failed to load scores:", err);
+                const body = document.getElementById('leaderboard-body');
+                if (body && allScores.length === 0) {
+                    document.getElementById('loading-state').innerHTML = `
+                        <h3>Unable to load leaderboard</h3>
+                        <p style="color: #f87171;">Could not connect to the database. Please check your connection and try again.</p>
+                        <button onclick="fetchLeaderboard(true)" class="btn-refresh" style="margin-top: 0.5rem;">Retry</button>
+                    `;
+                }
+            } finally {
+                if (refreshBtn) {
+                    setTimeout(() => refreshBtn.classList.remove('spinning'), 500);
+                }
+            }
+        }
+
+        function renderBoard(scoresToRender) {
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const noSearchState = document.getElementById('no-search-state');
+            const table = document.getElementById('leaderboard-table');
+            const tbody = document.getElementById('leaderboard-body');
+            const podiumSection = document.getElementById('podium-section');
+
+            const totalCountEl = document.getElementById('total-challengers-count');
+            const topScoreEl = document.getElementById('top-score-value');
+
+            totalCountEl.textContent = allScores.length;
+            topScoreEl.textContent = allScores.length > 0 ? `${allScores[0].score}/${allScores[0].total || 10}` : '--';
+
+            loadingState.style.display = 'none';
+
+            if (allScores.length === 0) {
+                podiumSection.style.display = 'none';
+                table.style.display = 'none';
+                emptyState.style.display = 'flex';
+                noSearchState.style.display = 'none';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Populate Podium with top 3 of overall scores (only if at least 1 score exists and no active search query)
+            const searchQuery = (document.getElementById('player-search').value || '').trim();
+            if (allScores.length > 0 && !searchQuery) {
+                podiumSection.style.display = 'grid';
+                renderPodium(allScores.slice(0, 3));
+            } else if (searchQuery) {
+                podiumSection.style.display = 'none';
+            }
+
+            if (scoresToRender.length === 0) {
+                table.style.display = 'none';
+                noSearchState.style.display = 'flex';
+                return;
+            }
+
+            noSearchState.style.display = 'none';
+            table.style.display = 'table';
+            tbody.innerHTML = '';
+
+            scoresToRender.forEach((entry, idx) => {
+                // Determine absolute rank
+                const rank = allScores.indexOf(entry) + 1;
+                const total = entry.total || 10;
+                const score = entry.score || 0;
+                const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+                const displayTime = formatDisplayTime(entry);
+                const safeName = escapeHTML(entry.name || 'Anonymous');
+                const initial = (safeName.charAt(0) || '?').toUpperCase();
+
+                let rankClass = '';
+                if (rank === 1) rankClass = 'gold';
+                else if (rank === 2) rankClass = 'silver';
+                else if (rank === 3) rankClass = 'bronze';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="rank-cell">
+                        <span class="rank-pill ${rankClass}">#${rank}</span>
+                    </td>
+                    <td>
+                        <div class="player-info">
+                            <div class="player-avatar">${initial}</div>
+                            <span class="player-name">${safeName}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="score-wrap">
+                            <div class="score-headline">
+                                <span class="score-fraction">${score} / ${total}</span>
+                                <span class="accuracy-badge">${accuracy}% Acc</span>
+                            </div>
+                            <div class="score-track" aria-hidden="true">
+                                <div class="score-fill" style="width: ${accuracy}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="time-cell">
+                        <span class="time-badge">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            ${displayTime}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderPodium(topThree) {
+            // Rank 1
+            if (topThree[0]) {
+                const p1 = topThree[0];
+                document.getElementById('podium-card-1').style.visibility = 'visible';
+                document.getElementById('podium-name-1').textContent = p1.name || 'Champion';
+                document.getElementById('podium-avatar-1').textContent = (p1.name || 'C').charAt(0).toUpperCase();
+                document.getElementById('podium-score-1').textContent = `${p1.score} / ${p1.total || 10} (${Math.round((p1.score / (p1.total || 10)) * 100)}%)`;
+                document.getElementById('podium-time-1').querySelector('span').textContent = formatDisplayTime(p1);
+            } else {
+                document.getElementById('podium-card-1').style.visibility = 'hidden';
+            }
+
+            // Rank 2
+            if (topThree[1]) {
+                const p2 = topThree[1];
+                document.getElementById('podium-card-2').style.visibility = 'visible';
+                document.getElementById('podium-name-2').textContent = p2.name || 'Challenger 2';
+                document.getElementById('podium-avatar-2').textContent = (p2.name || '2').charAt(0).toUpperCase();
+                document.getElementById('podium-score-2').textContent = `${p2.score} / ${p2.total || 10}`;
+                document.getElementById('podium-time-2').querySelector('span').textContent = formatDisplayTime(p2);
+            } else {
+                document.getElementById('podium-card-2').style.visibility = 'hidden';
+            }
+
+            // Rank 3
+            if (topThree[2]) {
+                const p3 = topThree[2];
+                document.getElementById('podium-card-3').style.visibility = 'visible';
+                document.getElementById('podium-name-3').textContent = p3.name || 'Challenger 3';
+                document.getElementById('podium-avatar-3').textContent = (p3.name || '3').charAt(0).toUpperCase();
+                document.getElementById('podium-score-3').textContent = `${p3.score} / ${p3.total || 10}`;
+                document.getElementById('podium-time-3').querySelector('span').textContent = formatDisplayTime(p3);
+            } else {
+                document.getElementById('podium-card-3').style.visibility = 'hidden';
+            }
+        }
+
+        // Live Search Filter Handler
+        document.getElementById('player-search').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                renderBoard(allScores);
+                return;
+            }
+            const filtered = allScores.filter(s => (s.name || '').toLowerCase().includes(query));
+            renderBoard(filtered);
+        });
+
+        // Initialize on page load
+        fetchLeaderboard();
+
+        // Auto-refresh every 30 seconds to keep live standings updated
+        setInterval(() => {
+            const searchQuery = (document.getElementById('player-search').value || '').trim();
+            if (!searchQuery) {
+                fetchLeaderboard();
+            }
+        }, 30000);
+    </script>
+</body>
+
+</html>

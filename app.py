@@ -59,6 +59,11 @@ def game_index():
     # The main URL loads the student guessing game
     return render_template('game.html')
 
+@app.route('/leaderboard')
+def leaderboard():
+    # Dedicated leaderboard page displaying player rankings
+    return render_template('leaderboard.html')
+
 @app.route('/api/questions', methods=['GET'])
 def get_questions():
     try:
@@ -127,8 +132,14 @@ def submit_score():
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
     # Public endpoint to view the leaderboard
-    with open(SCORES_FILE, 'r') as f:
-        return jsonify(json.load(f))
+    try:
+        with open(SCORES_FILE, 'r') as f:
+            scores = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        scores = []
+    # Ensure scores are sorted: score DESC, then time_ms ASC (non-timed entries sorted to end)
+    sorted_scores = sorted(scores, key=lambda x: (-int(x.get('score', 0)), x.get('time_ms') if x.get('time_ms') is not None else 99999999))
+    return jsonify(sorted_scores)
 
 
 # ==========================================
