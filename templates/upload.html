@@ -1,39 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Upload Dashboard</title>
+    <!-- Browser Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/jpcs.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/jpcs.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom scrollbar for better aesthetics */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans text-gray-800">
     <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-xl p-6 border-t-4 border-[#002f6c]">
-        
+
         <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 border-gray-100">
+        <div
+            class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 border-gray-100">
             <div>
                 <h1 class="text-3xl font-black text-[#002f6c] tracking-tight">Content Dashboard</h1>
                 <p class="text-sm text-gray-500 mt-1">ConvergeIT 2026 Game Database</p>
             </div>
-            <a href="/api/scores" target="_blank" class="mt-4 md:mt-0 flex items-center text-sm font-semibold text-[#00c2cb] hover:text-[#002f6c] transition-colors hover:underline bg-teal-50 px-4 py-2 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <a href="/api/scores" target="_blank"
+                class="mt-4 md:mt-0 flex items-center text-sm font-semibold text-[#00c2cb] hover:text-[#002f6c] transition-colors hover:underline bg-teal-50 px-4 py-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
                 View Scores API
             </a>
         </div>
-        
+
         <!-- Navigation Tabs -->
         <div class="flex space-x-4 mb-6 border-b border-gray-200">
-            <button id="tabImageBtn" onclick="switchTab('image')" class="py-2 px-1 font-bold text-[#002f6c] border-b-[3px] border-[#002f6c] focus:outline-none transition-all">
+            <button id="tabImageBtn" onclick="switchTab('image')"
+                class="py-2 px-1 font-bold text-[#002f6c] border-b-[3px] border-[#002f6c] focus:outline-none transition-all">
                 Batch Image Upload
             </button>
-            <button id="tabTextBtn" onclick="switchTab('text')" class="py-2 px-1 font-bold text-gray-400 hover:text-[#002f6c] border-b-[3px] border-transparent hover:border-gray-300 focus:outline-none transition-all">
+            <button id="tabTextBtn" onclick="switchTab('text')"
+                class="py-2 px-1 font-bold text-gray-400 hover:text-[#002f6c] border-b-[3px] border-transparent hover:border-gray-300 focus:outline-none transition-all">
                 Add Text Question
             </button>
         </div>
@@ -41,13 +68,20 @@
         <!-- ================= IMAGE UPLOAD TAB ================= -->
         <div id="imageTabContent" class="block animate-fade-in">
             <!-- File Input Area -->
-            <div class="mb-6 bg-blue-50/50 p-6 rounded-xl border-2 border-[#002f6c]/20 border-dashed hover:border-[#00c2cb] transition-colors relative">
+            <div
+                class="mb-6 bg-blue-50/50 p-6 rounded-xl border-2 border-[#002f6c]/20 border-dashed hover:border-[#00c2cb] transition-colors relative">
                 <label class="block text-center cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-[#002f6c] mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-[#002f6c] mb-2" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
                     <span class="block text-lg font-bold text-[#002f6c] mb-1">Click to select Multiple Images</span>
                     <span class="block text-sm font-medium text-gray-500 mb-4">Supports Portrait and Landscape</span>
                     <input type="file" id="batchInput" accept="image/*" multiple class="hidden">
-                    <span class="inline-block bg-[#00c2cb] text-white text-sm font-bold py-2 px-6 rounded-full shadow-md hover:bg-teal-600 transition-transform transform hover:scale-105">Browse Files</span>
+                    <span
+                        class="inline-block bg-[#00c2cb] text-white text-sm font-bold py-2 px-6 rounded-full shadow-md hover:bg-teal-600 transition-transform transform hover:scale-105">Browse
+                        Files</span>
                 </label>
             </div>
 
@@ -65,13 +99,15 @@
                     </thead>
                     <tbody id="batchTableBody" class="text-sm bg-white divide-y divide-gray-100">
                         <tr id="emptyState">
-                            <td colspan="5" class="p-8 text-center text-gray-400 italic">No files selected for upload yet.</td>
+                            <td colspan="5" class="p-8 text-center text-gray-400 italic">No files selected for upload
+                                yet.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            
-            <button id="uploadAllBtn" class="hidden w-full py-4 px-4 rounded-xl shadow-lg text-lg font-black text-white bg-[#002f6c] hover:bg-blue-900 transition-all focus:outline-none focus:ring-4 focus:ring-blue-300 transform active:scale-[0.99]">
+
+            <button id="uploadAllBtn"
+                class="hidden w-full py-4 px-4 rounded-xl shadow-lg text-lg font-black text-white bg-[#002f6c] hover:bg-blue-900 transition-all focus:outline-none focus:ring-4 focus:ring-blue-300 transform active:scale-[0.99]">
                 UPLOAD ALL IMAGES TO DATABASE
             </button>
         </div>
@@ -80,30 +116,38 @@
         <div id="textTabContent" class="hidden animate-fade-in">
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-bold text-[#002f6c] mb-2 uppercase tracking-wide">Question / Fact Text</label>
-                    <textarea id="textQuestionInput" rows="4" class="w-full p-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#00c2cb] text-lg" placeholder="Type the statement here (e.g., 'In 1999, scientists successfully cloned a human being.')"></textarea>
+                    <label class="block text-sm font-bold text-[#002f6c] mb-2 uppercase tracking-wide">Question / Fact
+                        Text</label>
+                    <textarea id="textQuestionInput" rows="4"
+                        class="w-full p-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:ring-2 focus:ring-[#00c2cb] text-lg"
+                        placeholder="Type the statement here (e.g., 'In 1999, scientists successfully cloned a human being.')"></textarea>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-sm font-bold text-[#002f6c] mb-2 uppercase tracking-wide">Is this statement AI-generated or Real?</label>
-                    <select id="textIsAi" class="block w-full px-4 py-3 text-lg font-bold bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#00c2cb] focus:ring-1 focus:ring-[#00c2cb] cursor-pointer">
+                    <label class="block text-sm font-bold text-[#002f6c] mb-2 uppercase tracking-wide">Is this statement
+                        AI-generated or Real?</label>
+                    <select id="textIsAi"
+                        class="block w-full px-4 py-3 text-lg font-bold bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:border-[#00c2cb] focus:ring-1 focus:ring-[#00c2cb] cursor-pointer">
                         <option value="false">Real (True Fact)</option>
                         <option value="true">AI (Fake / Generated)</option>
                     </select>
                 </div>
-                <button id="addTextBtn" class="w-full py-4 px-4 rounded-xl shadow-lg text-lg font-black text-white bg-[#00c2cb] hover:bg-teal-600 transition-all focus:outline-none focus:ring-4 focus:ring-teal-300 transform active:scale-[0.99]">
+                <button id="addTextBtn"
+                    class="w-full py-4 px-4 rounded-xl shadow-lg text-lg font-black text-white bg-[#00c2cb] hover:bg-teal-600 transition-all focus:outline-none focus:ring-4 focus:ring-teal-300 transform active:scale-[0.99]">
                     SAVE TEXT QUESTION
                 </button>
             </div>
         </div>
-        
+
         <!-- ================= DATABASE HISTORY TABLE ================= -->
         <div class="mt-12 pt-8 border-t-2 border-gray-100">
             <div class="flex justify-between items-end mb-4">
                 <h2 class="text-xl font-black text-[#002f6c]">Database History</h2>
-                <span class="bg-[#002f6c] text-white text-xs font-bold px-3 py-1 rounded-full"><span id="count">0</span> Entries</span>
+                <span class="bg-[#002f6c] text-white text-xs font-bold px-3 py-1 rounded-full"><span id="count">0</span>
+                    Entries</span>
             </div>
-            
-            <div class="overflow-x-auto max-h-[500px] border border-gray-200 rounded-xl shadow-inner relative bg-gray-50">
+
+            <div
+                class="overflow-x-auto max-h-[500px] border border-gray-200 rounded-xl shadow-inner relative bg-gray-50">
                 <table class="w-full text-left border-collapse">
                     <thead class="sticky top-0 bg-[#002f6c] shadow-md z-10">
                         <tr class="text-white text-xs uppercase tracking-wider">
@@ -122,16 +166,22 @@
     </div>
 
     <!-- ================= UNIVERSAL PREVIEW MODAL ================= -->
-    <div id="previewModal" class="hidden fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4 md:p-10 backdrop-blur-sm transition-opacity">
+    <div id="previewModal"
+        class="hidden fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4 md:p-10 backdrop-blur-sm transition-opacity">
         <div class="relative max-w-5xl w-full flex justify-center items-center h-full">
-            <button onclick="closeModal()" class="absolute top-4 right-4 md:-top-4 md:-right-4 text-white hover:text-[#00c2cb] text-5xl font-black focus:outline-none transition-colors drop-shadow-md z-50">&times;</button>
-            
+            <button onclick="closeModal()"
+                class="absolute top-4 right-4 md:-top-4 md:-right-4 text-white hover:text-[#00c2cb] text-5xl font-black focus:outline-none transition-colors drop-shadow-md z-50">&times;</button>
+
             <!-- Image View (Handles Portrait/Landscape automatically via object-contain) -->
-            <img id="modalImage" src="" alt="Full size preview" class="hidden w-full h-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
-            
+            <img id="modalImage" src="" alt="Full size preview"
+                class="hidden w-full h-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+
             <!-- Text View -->
-            <div id="modalTextContainer" class="hidden bg-white w-full max-w-3xl p-8 md:p-16 rounded-3xl shadow-2xl border-8 border-[#002f6c] max-h-[90vh] overflow-y-auto">
-                <p id="modalTextContent" class="text-3xl md:text-5xl font-black text-center text-[#002f6c] leading-tight md:leading-relaxed"></p>
+            <div id="modalTextContainer"
+                class="hidden bg-white w-full max-w-3xl p-8 md:p-16 rounded-3xl shadow-2xl border-8 border-[#002f6c] max-h-[90vh] overflow-y-auto">
+                <p id="modalTextContent"
+                    class="text-3xl md:text-5xl font-black text-center text-[#002f6c] leading-tight md:leading-relaxed">
+                </p>
             </div>
         </div>
     </div>
@@ -191,7 +241,7 @@
         }
 
         // Close modal on background click
-        document.getElementById('previewModal').addEventListener('click', function(e) {
+        document.getElementById('previewModal').addEventListener('click', function (e) {
             if (e.target === this) closeModal();
         });
 
@@ -211,19 +261,19 @@
         // Handle file selection
         batchInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            if(files.length > 0 && document.getElementById('emptyState')) {
+            if (files.length > 0 && document.getElementById('emptyState')) {
                 document.getElementById('emptyState').remove();
             }
-            
+
             files.forEach((file) => {
                 const rowId = `row_${Math.random().toString(36).substr(2, 9)}`;
                 uploadQueue.push({ id: rowId, file: file, uploaded: false });
-                
+
                 const previewUrl = URL.createObjectURL(file);
                 const tr = document.createElement('tr');
                 tr.id = rowId;
                 tr.className = "hover:bg-blue-50 transition-colors";
-                
+
                 tr.innerHTML = `
                     <td class="p-2 text-center align-middle border-b border-gray-100">
                         <div class="h-12 w-16 bg-gray-200 rounded-md overflow-hidden shadow-sm mx-auto cursor-pointer border border-gray-300 hover:border-[#00c2cb]" onclick="openModal('image', '${previewUrl}')">
@@ -252,18 +302,18 @@
                 `;
                 tableBody.appendChild(tr);
             });
-            
-            if(uploadQueue.length > 0) uploadAllBtn.classList.remove('hidden');
-            batchInput.value = ''; 
+
+            if (uploadQueue.length > 0) uploadAllBtn.classList.remove('hidden');
+            batchInput.value = '';
         });
 
         // Remove from upload queue
-        window.removeFile = function(id) {
+        window.removeFile = function (id) {
             uploadQueue = uploadQueue.filter(item => item.id !== id);
             const row = document.getElementById(id);
-            if(row) row.remove();
-            
-            if(uploadQueue.length === 0) {
+            if (row) row.remove();
+
+            if (uploadQueue.length === 0) {
                 uploadAllBtn.classList.add('hidden');
                 tableBody.innerHTML = `<tr id="emptyState"><td colspan="5" class="p-8 text-center text-gray-400 italic">No files selected for upload yet.</td></tr>`;
             }
@@ -274,28 +324,28 @@
             uploadAllBtn.disabled = true;
             uploadAllBtn.classList.replace('bg-[#002f6c]', 'bg-gray-400');
             uploadAllBtn.innerText = 'UPLOADING... PLEASE WAIT';
-            
+
             let allSuccess = true;
 
             for (let item of uploadQueue) {
                 if (item.uploaded) continue;
-                
+
                 const isAi = document.getElementById(`select_${item.id}`).value;
                 const progress = document.getElementById(`progress_${item.id}`);
                 const status = document.getElementById(`status_${item.id}`);
-                
+
                 const formData = new FormData();
                 formData.append('type', 'image');
                 formData.append('image', item.file);
                 formData.append('is_ai', isAi);
-                
+
                 try {
                     status.innerText = "UPLOADING";
                     status.classList.replace('text-gray-500', 'text-blue-500');
                     progress.style.width = "50%";
-                    
+
                     const response = await fetch('/api/upload?true=true', { method: 'POST', body: formData });
-                    
+
                     if (response.ok) {
                         progress.style.width = "100%";
                         progress.classList.replace('bg-[#00c2cb]', 'bg-green-500');
@@ -311,8 +361,8 @@
                     progress.style.width = "100%";
                 }
             }
-            
-            if(allSuccess) {
+
+            if (allSuccess) {
                 uploadAllBtn.innerText = 'UPLOAD COMPLETE';
                 uploadAllBtn.classList.replace('bg-gray-400', 'bg-green-600');
             } else {
@@ -325,14 +375,14 @@
                 uploadAllBtn.classList.add('bg-[#002f6c]');
                 uploadAllBtn.disabled = false;
                 uploadAllBtn.innerText = 'UPLOAD ALL IMAGES TO DATABASE';
-                
+
                 // Clear successful uploads from the UI to clean up
                 uploadQueue = uploadQueue.filter(item => {
-                    if(item.uploaded) { document.getElementById(item.id).remove(); return false; }
+                    if (item.uploaded) { document.getElementById(item.id).remove(); return false; }
                     return true;
                 });
-                
-                if(uploadQueue.length === 0) {
+
+                if (uploadQueue.length === 0) {
                     uploadAllBtn.classList.add('hidden');
                     tableBody.innerHTML = `<tr id="emptyState"><td colspan="5" class="p-8 text-center text-gray-400 italic">No files selected for upload yet.</td></tr>`;
                 }
@@ -348,7 +398,7 @@
             const isAi = document.getElementById('textIsAi').value;
             const btn = document.getElementById('addTextBtn');
 
-            if(!content) {
+            if (!content) {
                 alert("Please type a question or fact statement first.");
                 document.getElementById('textQuestionInput').focus();
                 return;
@@ -366,10 +416,10 @@
             try {
                 const response = await fetch('/api/upload?true=true', { method: 'POST', body: formData });
                 if (response.ok) {
-                    document.getElementById('textQuestionInput').value = ''; 
+                    document.getElementById('textQuestionInput').value = '';
                     btn.innerText = "SUCCESS!";
                     btn.classList.replace('bg-gray-400', 'bg-green-500');
-                    loadUploadedData(); 
+                    loadUploadedData();
                 } else {
                     alert("Failed to save text question to server.");
                     btn.innerText = "ERROR";
@@ -381,7 +431,7 @@
                 btn.innerText = "ERROR";
                 btn.classList.replace('bg-gray-400', 'bg-red-500');
             }
-            
+
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerText = "SAVE TEXT QUESTION";
@@ -391,7 +441,7 @@
         });
 
         // --- Database History Logic ---
-        
+
         // Fetch and render data
         function loadUploadedData() {
             fetch('/api/data')
@@ -399,9 +449,9 @@
                 .then(data => {
                     document.getElementById('count').innerText = data.length;
                     const historyBody = document.getElementById('historyTableBody');
-                    historyBody.innerHTML = ''; 
-                    
-                    if(data.length === 0) {
+                    historyBody.innerHTML = '';
+
+                    if (data.length === 0) {
                         historyBody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-gray-500 italic font-medium">No entries currently in database.</td></tr>`;
                         return;
                     }
@@ -410,10 +460,10 @@
                     data.reverse().forEach(item => {
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-blue-50 transition-colors group";
-                        
+
                         let previewHtml = '';
                         let contentDisplay = '';
-                        let isText = item.type === 'text'; 
+                        let isText = item.type === 'text';
 
                         if (isText) {
                             const textContent = item.text_content || item.content || '';
@@ -479,29 +529,29 @@
         }
 
         // UPDATE (PATCH) an existing record's Answer
-        window.updateAnswer = async function(id, newValue, selectElement) {
+        window.updateAnswer = async function (id, newValue, selectElement) {
             const isAi = newValue === 'true';
-            
+
             // Provide immediate visual feedback on the select box
             selectElement.disabled = true;
             selectElement.classList.add('opacity-50', 'animate-pulse');
 
             try {
                 // Ensure your backend app.py has an endpoint to handle this PATCH request
-                const response = await fetch(`/api/update/${id}?true=true`, { 
+                const response = await fetch(`/api/update/${id}?true=true`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ is_ai: isAi })
                 });
-                
-                if(response.ok) {
+
+                if (response.ok) {
                     // Update Colors based on new selection
                     selectElement.className = `inline-block w-3/4 px-2 py-1.5 text-sm font-bold border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00c2cb] cursor-pointer transition-colors ${isAi ? 'bg-teal-50 border-teal-200 text-teal-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`;
-                } else { 
-                    alert("Server failed to update the record."); 
+                } else {
+                    alert("Server failed to update the record.");
                     loadUploadedData(); // Revert to original data
                 }
-            } catch(error) {
+            } catch (error) {
                 console.error("Error updating:", error);
                 alert("Network error connecting to server.");
                 loadUploadedData(); // Revert
@@ -512,7 +562,7 @@
         };
 
         // EDIT a text question entry
-        window.editText = async function(id, encodedCurrentText) {
+        window.editText = async function (id, encodedCurrentText) {
             const currentText = decodeURIComponent(encodedCurrentText);
             const newText = prompt("Edit Question Statement:", currentText);
             if (newText === null) return;
@@ -539,15 +589,15 @@
         };
 
         // DELETE an entry
-        window.deleteEntry = async function(id) {
-            if(!confirm("WARNING: Are you sure you want to delete this entry? This will permanently remove it from the database.")) return;
-            
+        window.deleteEntry = async function (id) {
+            if (!confirm("WARNING: Are you sure you want to delete this entry? This will permanently remove it from the database.")) return;
+
             try {
                 const response = await fetch(`/api/delete/${id}?true=true`, { method: 'DELETE' });
-                if(response.ok) {
+                if (response.ok) {
                     loadUploadedData(); // Refresh UI
                 } else { alert("Server failed to delete the entry."); }
-            } catch(error) {
+            } catch (error) {
                 console.error("Error deleting:", error);
                 alert("Error connecting to server.");
             }
@@ -557,4 +607,5 @@
         loadUploadedData();
     </script>
 </body>
+
 </html>

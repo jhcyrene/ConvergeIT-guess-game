@@ -5,12 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ConvergeIT 2026: AI or Real?</title>
-    <!-- Modern Gaming & Display Typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <!-- Browser Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/jpcs.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='assets/jpcs.png') }}">
     <style>
         :root {
             color-scheme: dark;
@@ -57,7 +54,7 @@
             margin: 0;
             overflow: hidden;
             touch-action: pan-y;
-            font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             color: var(--text-main);
 
             /* Deep ConvergeIT Oceanic Tech Navy Canvas */
@@ -930,7 +927,7 @@
             min-height: 3.2rem;
             border: 0;
             border-radius: 9999px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: linear-gradient(135deg, #0066d6, #004ba0);
             color: #fff;
             font: inherit;
             font-size: 1rem;
@@ -941,10 +938,32 @@
             transition: all 0.2s ease;
         }
 
-        .result-panel button:hover {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        .result-panel button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0077ed, #005bb5);
             transform: translateY(-1px);
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+
+        .result-panel button:disabled {
+            background: #08162b;
+            color: rgba(255, 255, 255, 0.38);
+            box-shadow: none;
+            cursor: wait;
+            transform: none;
+        }
+
+        .result-panel button.btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 194, 203, 0.22);
+            color: var(--text-main);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-panel button.btn-secondary:hover {
+            background: rgba(0, 102, 214, 0.18);
+            border-color: rgba(0, 194, 203, 0.45);
+            color: #ffffff;
+            transform: translateY(-1px);
         }
 
         /* Responsive Breakpoints */
@@ -1177,9 +1196,18 @@
         <div id="submit-section" class="result-panel">
             <h3>Save Your Standing</h3>
             <input type="text" id="player-name" placeholder="Enter your name or handle" maxlength="20">
-            <button onclick="submitScore()">
-                Record to Leaderboard
-            </button>
+            <div id="save-error-notice" class="is-hidden"
+                style="color: #fca5a5; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.85rem; text-align: center; background: rgba(239, 68, 68, 0.12); padding: 0.55rem 0.85rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.28);">
+                Could not save record to database. You can retry or start the next game now.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                <button id="save-score-btn" onclick="submitScore()">
+                    Record to Leaderboard
+                </button>
+                <button id="skip-next-btn" onclick="location.reload()" class="btn-secondary">
+                    Start Next Game
+                </button>
+            </div>
         </div>
 
         <div id="success-msg" class="result-panel is-hidden">
@@ -1692,10 +1720,12 @@
         window.submitScore = function () {
             const nameInput = document.getElementById('player-name');
             const name = nameInput.value.trim() || "Student";
-            const btn = document.querySelector('#submit-section button');
+            const btn = document.getElementById('save-score-btn') || document.querySelector('#submit-section button');
+            const errorNotice = document.getElementById('save-error-notice');
 
             btn.disabled = true;
-            btn.innerText = "Saving...";
+            btn.innerText = "Saving Record...";
+            if (errorNotice) errorNotice.classList.add('is-hidden');
 
             fetch('/api/submit_score', {
                 method: 'POST',
@@ -1717,8 +1747,13 @@
                     document.getElementById('success-msg').classList.remove('is-hidden');
                 })
                 .catch(err => {
+                    console.warn('Score submission error:', err);
+                    // Reset the button so the player can retry or proceed
                     btn.disabled = false;
-                    btn.innerText = "Error - Try Again";
+                    btn.innerText = "Retry Saving";
+                    if (errorNotice) {
+                        errorNotice.classList.remove('is-hidden');
+                    }
                 });
         };
     </script>
