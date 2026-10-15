@@ -1069,12 +1069,259 @@
                 font-size: 0.85rem;
             }
         }
+
+        /* 3-Second Pre-Game Countdown Overlay */
+        .countdown-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 250;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 12, 27, 0.95);
+            user-select: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .countdown-overlay.is-hidden {
+            display: none !important;
+        }
+
+        .countdown-modal {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: clamp(230px, 36vw, 320px);
+            height: clamp(230px, 36vw, 320px);
+        }
+
+        .countdown-ring-wrap {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .countdown-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .countdown-bg-circle {
+            fill: #07152b;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 6;
+        }
+
+        .countdown-progress-circle {
+            fill: none;
+            stroke: var(--accent-cyan);
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 339.29;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.95s linear, stroke 0.3s ease;
+        }
+
+        .countdown-pulse-ring {
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 194, 203, 0.35);
+            animation: countdownPulse 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+            pointer-events: none;
+        }
+
+        @keyframes countdownPulse {
+            0% {
+                transform: scale(0.96);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.15);
+                opacity: 0;
+            }
+        }
+
+        .countdown-center-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .countdown-number {
+            font-size: clamp(4.5rem, 11vw, 7rem);
+            font-weight: 800;
+            line-height: 1;
+            color: #ffffff;
+            text-shadow: 0 4px 20px rgba(0, 194, 203, 0.6);
+            display: inline-block;
+        }
+
+        .countdown-number.pop {
+            animation: countPop 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.2) forwards;
+        }
+
+        @keyframes countPop {
+            0% {
+                transform: scale(0.35);
+                opacity: 0;
+            }
+
+            65% {
+                transform: scale(1.22);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .countdown-label {
+            margin-top: 0.4rem;
+            font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+        }
+
+        /* Card Video Player */
+        .card-video-wrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: inherit;
+            overflow: hidden;
+        }
+
+        .card-video {
+            display: block;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            object-position: center;
+            pointer-events: none;
+        }
+
+        .video-sound-toggle {
+            position: absolute;
+            bottom: 0.85rem;
+            right: 0.85rem;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(7, 21, 43, 0.85);
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+            transition: transform 0.18s ease, background 0.18s ease;
+            pointer-events: auto;
+        }
+
+        .video-sound-toggle:hover {
+            transform: scale(1.12);
+            background: #0066d6;
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .video-badge-pill {
+            position: absolute;
+            top: 0.85rem;
+            left: 0.85rem;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            background: rgba(7, 21, 43, 0.85);
+            border: 1px solid rgba(139, 92, 246, 0.45);
+            color: #c4b5fd;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        /* Flank Preview for Video Questions */
+        .flank-video-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 40%, #152238 0%, #0a101f 100%);
+            color: #c4b5fd;
+            opacity: 0.6;
+        }
+
+        .flank-video-icon {
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 50%;
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.35rem;
+            font-size: 1.1rem;
+            color: #a78bfa;
+        }
+
+        .flank-video-preview span {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 
 <body class="game-shell">
 
-    <!-- Dynamic Ambient Glow Backdrop (Removed) -->
+    <!-- Pre-Game 3-Second Countdown Overlay -->
+    <div id="countdown-overlay" class="countdown-overlay is-hidden" aria-live="assertive" aria-modal="true"
+        role="dialog">
+        <div class="countdown-modal">
+            <div class="countdown-pulse-ring"></div>
+            <div class="countdown-ring-wrap">
+                <svg class="countdown-svg" viewBox="0 0 120 120">
+                    <circle class="countdown-bg-circle" cx="60" cy="60" r="54" />
+                    <circle class="countdown-progress-circle" id="countdown-progress-circle" cx="60" cy="60" r="54" />
+                </svg>
+            </div>
+            <div class="countdown-center-content">
+                <span id="countdown-number" class="countdown-number">3</span>
+                <span id="countdown-label" class="countdown-label">GET READY</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Start Screen Overlay (No Banner, 2 Logos Only) -->
     <div id="start-screen" class="start-screen">
@@ -1115,7 +1362,7 @@
             <img src="{{ url_for('static', filename='assets/convlogo.png') }}" alt="ConvergeIT 2026" class="brand-mark">
             <div>
                 <div class="brand-name">ConvergeIT</div>
-                <div class="brand-subtitle">Interactive Challenge</div>
+                <div class="brand-subtitle">AI Image Recognition</div>
             </div>
         </div>
 
@@ -1155,6 +1402,10 @@
                     <div class="flank-quote-icon">“</div>
                     <p id="flank-left-snippet"></p>
                 </div>
+                <div class="flank-video-preview" id="flank-left-video" style="display: none;">
+                    <div class="flank-video-icon">▶</div>
+                    <span>Video Question</span>
+                </div>
                 <div class="flank-overlay"></div>
             </div>
 
@@ -1164,6 +1415,10 @@
                 <div class="flank-text-preview" id="flank-right-text" style="display: none;">
                     <div class="flank-quote-icon">“</div>
                     <p id="flank-right-snippet"></p>
+                </div>
+                <div class="flank-video-preview" id="flank-right-video" style="display: none;">
+                    <div class="flank-video-icon">▶</div>
+                    <span>Video Question</span>
                 </div>
                 <div class="flank-overlay"></div>
             </div>
@@ -1377,12 +1632,161 @@
             // Ambient backdrop color filter removed
         }
 
+        // Audio synthesis for arcade countdown beeps (No external audio files needed)
+        function playCountdownBeep(isFinal = false) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                if (!window._gameAudioCtx) {
+                    window._gameAudioCtx = new AudioCtx();
+                }
+                const ctx = window._gameAudioCtx;
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (isFinal) {
+                    // GO! / START! - crisp high-register ascending chime
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.39);
+                } else {
+                    // 3, 2, 1 - clean arcade countdown pip
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.19);
+                }
+            } catch (e) {
+                // AudioContext not supported or restricted; silently continue
+            }
+        }
+
         function startGame() {
             if (!dataLoaded) return;
             startScreen.classList.add('is-hidden');
+            startPreGameCountdown();
+        }
+
+        function startPreGameCountdown() {
+            const overlay = document.getElementById('countdown-overlay');
+            const numEl = document.getElementById('countdown-number');
+            const labelEl = document.getElementById('countdown-label');
+            const circle = document.getElementById('countdown-progress-circle');
+
+            if (!overlay || !numEl) {
+                launchActiveGame();
+                return;
+            }
+
+            overlay.classList.remove('is-hidden');
+            overlay.style.opacity = '1';
+
+            const totalCircumference = 339.29; // 2 * Math.PI * 54
+            const steps = [
+                { count: '3', label: 'GET READY', offset: 0, final: false },
+                { count: '2', label: 'GET SET', offset: totalCircumference * (1 / 3), final: false },
+                { count: '1', label: 'FOCUS', offset: totalCircumference * (2 / 3), final: false },
+                { count: 'GO!', label: 'START!', offset: totalCircumference, final: true }
+            ];
+
+            let stepIdx = 0;
+
+            function runStep() {
+                if (stepIdx < steps.length) {
+                    const s = steps[stepIdx];
+                    numEl.innerText = s.count;
+                    if (labelEl) labelEl.innerText = s.label;
+
+                    // Trigger pop animation
+                    numEl.classList.remove('pop');
+                    void numEl.offsetWidth; // Force DOM reflow
+                    numEl.classList.add('pop');
+
+                    if (circle) {
+                        circle.style.strokeDashoffset = s.offset;
+                        if (s.final) {
+                            circle.style.stroke = '#10b981';
+                            numEl.style.color = '#38bdf8';
+                        } else {
+                            circle.style.stroke = 'var(--accent-cyan)';
+                            numEl.style.color = '#ffffff';
+                        }
+                    }
+
+                    playCountdownBeep(s.final);
+                    stepIdx++;
+
+                    if (stepIdx <= 3) {
+                        setTimeout(runStep, 1000);
+                    } else {
+                        // After "GO!" is displayed, pause briefly then transition into game
+                        setTimeout(() => {
+                            overlay.style.opacity = '0';
+                            setTimeout(() => {
+                                overlay.classList.add('is-hidden');
+                                launchActiveGame();
+                            }, 220);
+                        }, 550);
+                    }
+                }
+            }
+
+            runStep();
+        }
+
+        function launchActiveGame() {
             isGameActive = true;
             gameStartTime = performance.now();
             startTimer();
+            playActiveCardVideo();
+        }
+
+        function playActiveCardVideo() {
+            if (!isGameActive) return;
+            const remainingCards = document.querySelectorAll('.card');
+            if (remainingCards.length === 0) return;
+
+            let maxZ = -1;
+            let topCard = null;
+            remainingCards.forEach(c => {
+                const z = parseInt(c.style.zIndex || 0);
+                if (z > maxZ) {
+                    maxZ = z;
+                    topCard = c;
+                }
+            });
+
+            // Pause all videos on non-top cards to save CPU/GPU resources
+            document.querySelectorAll('.card-video').forEach(v => {
+                if (!topCard || !topCard.contains(v)) {
+                    try { v.pause(); } catch (e) { }
+                }
+            });
+
+            // Automatically play video on the active top card
+            if (topCard) {
+                const activeVideo = topCard.querySelector('.card-video');
+                if (activeVideo) {
+                    const playPromise = activeVideo.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => {
+                            console.warn('Auto video playback waiting on gesture or policy:', err);
+                        });
+                    }
+                }
+            }
         }
 
         function startTimer() {
@@ -1412,13 +1816,29 @@
             const realBtnText = document.getElementById('btn-real-text');
             const mobileRealBtn = document.getElementById('mobile-btn-real');
             if (!currentQ) return;
+
             const isText = currentQ.type === 'text' || (!currentQ.url && (currentQ.text_content || currentQ.content || currentQ.text));
+            const isVideo = currentQ.type === 'video' || (currentQ.url && anyVideoExtension(currentQ.url));
+
+            let realLabel = 'Real Image';
+            if (isVideo) {
+                realLabel = 'Real Video';
+            } else if (isText) {
+                realLabel = 'Not AI';
+            }
+
             if (realBtnText) {
-                realBtnText.textContent = isText ? 'Not AI' : 'Real Image';
+                realBtnText.textContent = realLabel;
             }
             if (mobileRealBtn) {
-                mobileRealBtn.innerHTML = (isText ? 'Not AI' : 'Real Image') + ' <span aria-hidden="true">►</span>';
+                mobileRealBtn.innerHTML = realLabel + ' <span aria-hidden="true">►</span>';
             }
+        }
+
+        function anyVideoExtension(url) {
+            if (!url || typeof url !== 'string') return false;
+            const u = url.toLowerCase();
+            return u.endsWith('.mp4') || u.endsWith('.webm') || u.endsWith('.mov') || u.endsWith('.ogg') || u.endsWith('.m4v');
         }
 
         function updateProgress() {
@@ -1456,19 +1876,28 @@
             const flankLeft = document.getElementById('flank-left');
             const flankLeftImg = document.getElementById('flank-left-img');
             const flankLeftText = document.getElementById('flank-left-text');
+            const flankLeftVideo = document.getElementById('flank-left-video');
             const flankLeftSnippet = document.getElementById('flank-left-snippet');
 
             if (flankLeft) {
                 if (prevQuestion) {
                     const isPrevText = prevQuestion.type === 'text' || (!prevQuestion.url && (prevQuestion.text_content || prevQuestion.content || prevQuestion.text));
-                    if (isPrevText) {
+                    const isPrevVideo = prevQuestion.type === 'video' || (prevQuestion.url && anyVideoExtension(prevQuestion.url));
+
+                    if (isPrevVideo) {
                         if (flankLeftImg) flankLeftImg.style.display = 'none';
+                        if (flankLeftText) flankLeftText.style.display = 'none';
+                        if (flankLeftVideo) flankLeftVideo.style.display = 'flex';
+                    } else if (isPrevText) {
+                        if (flankLeftImg) flankLeftImg.style.display = 'none';
+                        if (flankLeftVideo) flankLeftVideo.style.display = 'none';
                         if (flankLeftText) {
                             flankLeftText.style.display = 'flex';
                             if (flankLeftSnippet) flankLeftSnippet.textContent = prevQuestion.text_content || prevQuestion.content || prevQuestion.text || '';
                         }
                     } else if (prevQuestion.url) {
                         if (flankLeftText) flankLeftText.style.display = 'none';
+                        if (flankLeftVideo) flankLeftVideo.style.display = 'none';
                         if (flankLeftImg) {
                             flankLeftImg.style.display = 'block';
                             flankLeftImg.src = prevQuestion.url;
@@ -1483,19 +1912,28 @@
             const flankRight = document.getElementById('flank-right');
             const flankRightImg = document.getElementById('flank-right-img');
             const flankRightText = document.getElementById('flank-right-text');
+            const flankRightVideo = document.getElementById('flank-right-video');
             const flankRightSnippet = document.getElementById('flank-right-snippet');
 
             if (flankRight) {
                 if (nextQuestion) {
                     const isNextText = nextQuestion.type === 'text' || (!nextQuestion.url && (nextQuestion.text_content || nextQuestion.content || nextQuestion.text));
-                    if (isNextText) {
+                    const isNextVideo = nextQuestion.type === 'video' || (nextQuestion.url && anyVideoExtension(nextQuestion.url));
+
+                    if (isNextVideo) {
                         if (flankRightImg) flankRightImg.style.display = 'none';
+                        if (flankRightText) flankRightText.style.display = 'none';
+                        if (flankRightVideo) flankRightVideo.style.display = 'flex';
+                    } else if (isNextText) {
+                        if (flankRightImg) flankRightImg.style.display = 'none';
+                        if (flankRightVideo) flankRightVideo.style.display = 'none';
                         if (flankRightText) {
                             flankRightText.style.display = 'flex';
                             if (flankRightSnippet) flankRightSnippet.textContent = nextQuestion.text_content || nextQuestion.content || nextQuestion.text || '';
                         }
                     } else if (nextQuestion.url) {
                         if (flankRightText) flankRightText.style.display = 'none';
+                        if (flankRightVideo) flankRightVideo.style.display = 'none';
                         if (flankRightImg) {
                             flankRightImg.style.display = 'block';
                             flankRightImg.src = nextQuestion.url;
@@ -1510,8 +1948,8 @@
 
         function adaptCardToImage(card, img) {
             if (!card || !img) return;
-            const nw = img.naturalWidth;
-            const nh = img.naturalHeight;
+            const nw = img.naturalWidth || img.videoWidth;
+            const nh = img.naturalHeight || img.videoHeight;
             if (!nw || !nh) return;
 
             const ratio = nw / nh;
@@ -1567,6 +2005,7 @@
                 card.style.visibility = i < 3 ? 'visible' : 'hidden';
 
                 const isText = q.type === 'text' || (!q.url && (q.text_content || q.content || q.text));
+                const isVideo = q.type === 'video' || (q.url && anyVideoExtension(q.url));
 
                 if (isText) {
                     card.dataset.aspectRatio = "1.35";
@@ -1589,6 +2028,74 @@
                     statement.textContent = q.text_content || q.content || q.text || '';
                     textPanel.append(quoteIcon, statement);
                     card.appendChild(textPanel);
+                } else if (isVideo) {
+                    const mediaWrap = document.createElement('div');
+                    mediaWrap.className = 'card-media-wrap card-video-wrap';
+
+                    const video = document.createElement('video');
+                    video.className = 'card-video';
+                    video.src = q.url || '';
+                    video.playsInline = true;
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.loop = true;
+                    video.muted = true; // Required by modern browsers for zero-click autoplay
+                    video.autoplay = true;
+                    video.preload = i < 3 ? 'auto' : 'metadata';
+                    video.setAttribute('aria-label', `Challenge video #${i + 1}`);
+
+                    // Adapt card size to video aspect ratio
+                    const onVideoMeta = () => {
+                        if (video.videoWidth && video.videoHeight) {
+                            adaptCardToImage(card, { naturalWidth: video.videoWidth, naturalHeight: video.videoHeight });
+                        }
+                    };
+                    video.addEventListener('loadedmetadata', onVideoMeta);
+                    if (video.videoWidth && video.videoHeight) {
+                        onVideoMeta();
+                    }
+
+                    // Video audio toggle button
+                    const soundBtn = document.createElement('button');
+                    soundBtn.type = 'button';
+                    soundBtn.className = 'video-sound-toggle';
+                    soundBtn.setAttribute('aria-label', 'Toggle audio');
+                    soundBtn.title = 'Toggle sound';
+                    soundBtn.innerHTML = `
+                        <svg class="icon-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <line x1="23" y1="9" x2="17" y2="15"></line>
+                            <line x1="17" y1="9" x2="23" y2="15"></line>
+                        </svg>
+                        <svg class="icon-unmuted" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                    `;
+                    soundBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        video.muted = !video.muted;
+                        const iconMuted = soundBtn.querySelector('.icon-muted');
+                        const iconUnmuted = soundBtn.querySelector('.icon-unmuted');
+                        if (iconMuted && iconUnmuted) {
+                            iconMuted.style.display = video.muted ? 'block' : 'none';
+                            iconUnmuted.style.display = video.muted ? 'none' : 'block';
+                        }
+                    });
+
+                    // Video badge indicator
+                    const badge = document.createElement('div');
+                    badge.className = 'video-badge-pill';
+                    badge.innerHTML = `
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span>Video</span>
+                    `;
+
+                    mediaWrap.appendChild(video);
+                    mediaWrap.appendChild(badge);
+                    mediaWrap.appendChild(soundBtn);
+                    card.appendChild(mediaWrap);
                 } else {
                     const mediaWrap = document.createElement('div');
                     mediaWrap.className = 'card-media-wrap';
@@ -1618,7 +2125,13 @@
                 }
 
                 // Decision stamp overlays (Shown while dragging / swiping)
-                const realStampText = isText ? 'Not AI' : 'REAL IMAGE';
+                let realStampText = 'REAL IMAGE';
+                if (isVideo) {
+                    realStampText = 'REAL VIDEO';
+                } else if (isText) {
+                    realStampText = 'NOT AI';
+                }
+
                 card.insertAdjacentHTML('beforeend', `
                     <div class="overlay-ai" aria-hidden="true"><span>AI GENERATED</span></div>
                     <div class="overlay-real" aria-hidden="true"><span>${realStampText}</span></div>
@@ -1733,6 +2246,12 @@
             card.dataset.answered = 'true';
             const isActualAi = card.dataset.isAi === 'true';
 
+            // Pause swiped video immediately to avoid overlapping audio
+            const swipedVid = card.querySelector('.card-video');
+            if (swipedVid) {
+                try { swipedVid.pause(); } catch (e) { }
+            }
+
             card.style.transition = 'transform 0.38s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-out';
             card.style.transform = `translateX(${throwX}px) rotate(${throwX * 0.035}deg)`;
             card.style.opacity = '0';
@@ -1754,6 +2273,7 @@
                         const stackLevel = Math.min(idx, 2);
                         c.style.transform = `scale(${1 - stackLevel * 0.025}) translateY(${stackLevel * 8}px)`;
                         c.style.visibility = idx < 3 ? 'visible' : 'hidden';
+
                         const image = c.querySelector('.card-media-wrap img');
                         if (idx < 3 && image) {
                             if (image.dataset.src && !image.hasAttribute('src')) {
@@ -1762,6 +2282,11 @@
                             if (image.complete && image.naturalWidth > 0) {
                                 adaptCardToImage(c, image);
                             }
+                        }
+
+                        const video = c.querySelector('.card-video');
+                        if (idx < 3 && video && video.videoWidth && video.videoHeight) {
+                            adaptCardToImage(c, { naturalWidth: video.videoWidth, naturalHeight: video.videoHeight });
                         }
                     });
 
@@ -1777,6 +2302,7 @@
 
                     updateProgress();
                     updateFlankPreviews();
+                    playActiveCardVideo();
                 } else {
                     isGameActive = false;
                     showEndScreen();
@@ -1787,6 +2313,11 @@
         function showEndScreen() {
             gameEndTime = performance.now();
             clearInterval(timerInterval);
+
+            // Pause all remaining videos
+            document.querySelectorAll('.card-video').forEach(v => {
+                try { v.pause(); } catch (e) { }
+            });
 
             finalElapsedMs = Math.round(gameEndTime - gameStartTime);
             finalFormattedTime = formatTimeWithMs(finalElapsedMs);

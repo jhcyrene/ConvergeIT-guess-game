@@ -8,12 +8,15 @@ app = Flask(__name__)
 
 # File Paths
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'images')
+VIDEO_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'videos')
 DATA_FILE = os.path.join(os.path.dirname(__file__), 'data.json')
 SCORES_FILE = os.path.join(os.path.dirname(__file__), 'scores.json')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['VIDEO_FOLDER'] = VIDEO_FOLDER
 
 # Ensure directories and JSON files exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
 def init_json_file(filepath):
     if not os.path.exists(filepath):
@@ -78,15 +81,19 @@ def get_questions():
             continue
         
         q_type = item.get('type')
-        # Check if text question
         text_content = (item.get('text_content') or item.get('content') or item.get('text') or '').strip()
-        has_image = bool(item.get('url') or item.get('filename'))
+        has_media = bool(item.get('url') or item.get('filename'))
+        media_url = str(item.get('url') or item.get('filename') or '').lower()
+        is_video = q_type == 'video' or any(media_url.endswith(ext) for ext in ('.mp4', '.webm', '.mov', '.ogg', '.m4v'))
 
-        if q_type == 'text' or (not has_image and text_content):
+        if is_video:
+            item['type'] = 'video'
+            valid_data.append(item)
+        elif q_type == 'text' or (not has_media and text_content):
             item['type'] = 'text'
             item['text_content'] = text_content
             valid_data.append(item)
-        elif has_image:
+        elif has_media:
             item['type'] = 'image'
             valid_data.append(item)
     
@@ -182,22 +189,27 @@ def api_upload():
         ''
     ).strip()
 
-    # Safely check whether an actual image file was provided
-    has_image_file = (
-        'image' in request.files and
-        bool(request.files['image'].filename and request.files['image'].filename.strip())
+    # Safely check whether an actual media file was provided
+    uploaded_file = (
+        request.files.get('video') or
+        request.files.get('image') or
+        request.files.get('file')
     )
+    filename_lower = (uploaded_file.filename if uploaded_file else '').lower()
+    is_video_file = bool(uploaded_file and any(filename_lower.endswith(ext) for ext in ('.mp4', '.webm', '.mov', '.ogg', '.m4v')))
 
     # Determine question type
     raw_type = (form_data.get('type') or json_data.get('type') or '').strip().lower()
-    if raw_type == 'text':
+    if raw_type == 'video' or is_video_file:
+        entry_type = 'video'
+    elif raw_type == 'text':
         entry_type = 'text'
     elif raw_type == 'image':
         entry_type = 'image'
-    elif text_content and not has_image_file:
+    elif text_content and not uploaded_file:
         entry_type = 'text'
-    elif has_image_file:
-        entry_type = 'image'
+    elif uploaded_file:
+        entry_type = 'video' if is_video_file else 'image'
     else:
         entry_type = 'text' if text_content else 'image'
 
@@ -211,18 +223,27 @@ def api_upload():
         "is_ai": is_ai
     }
 
-    if entry_type == 'image':
-        if 'image' not in request.files:
+    if entry_type == 'video':
+        if not uploaded_file or uploaded_file.filename == '':
+            return jsonify({"error": "No video file provided"}), 400
+        
+        ext = uploaded_file.filename.rsplit('.', 1)[1].lower() if '.' in uploaded_file.filename else 'mp4'
+        filename = f"{uuid.uuid4().hex[:8]}.{ext}"
+        filepath = os.path.join(app.config['VIDEO_FOLDER'], filename)
+        uploaded_file.save(filepath)
+
+        new_entry["filename"] = filename
+        new_entry["url"] = f"/static/videos/{filename}"
+        new_entry["dominant_color"] = "#0066d6"
+
+    elif entry_type == 'image':
+        if not uploaded_file or uploaded_file.filename == '':
             return jsonify({"error": "No image file provided"}), 400
         
-        file = request.files['image']
-        if file.filename == '':
-            return jsonify({"error": "No file selected"}), 400
-        
-        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+        ext = uploaded_file.filename.rsplit('.', 1)[1].lower() if '.' in uploaded_file.filename else 'png'
         filename = f"{uuid.uuid4().hex[:8]}.{ext}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        uploaded_file.save(filepath)
 
         new_entry["filename"] = filename
         new_entry["url"] = f"/static/images/{filename}"
@@ -367,8 +388,11 @@ def delete_entry(entry_id):
     entry_to_delete = next((item for item in data if item['id'] == entry_id), None)
 
     if entry_to_delete:
-        if entry_to_delete.get('type', 'image') == 'image' and 'filename' in entry_to_delete:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], entry_to_delete['filename'])
+        q_type = entry_to_delete.get('type', 'image')
+        filename = entry_to_delete.get('filename')
+        if filename:
+            target_folder = app.config['VIDEO_FOLDER'] if q_type == 'video' else app.config['UPLOAD_FOLDER']
+            filepath = os.path.join(target_folder, filename)
             if os.path.exists(filepath):
                 try:
                     os.remove(filepath)
