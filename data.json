@@ -580,21 +580,5 @@
         "filename": "f5cb432c.mp4",
         "url": "/static/videos/f5cb432c.mp4",
         "dominant_color": "#0066d6"
-    },
-    {
-        "id": "9c9225bf-194a-481a-9686-b31f592f2355",
-        "type": "video",
-        "is_ai": true,
-        "filename": "9a244bfa.mp4",
-        "url": "/static/videos/9a244bfa.mp4",
-        "dominant_color": "#0066d6"
-    },
-    {
-        "id": "34c605d5-d521-4b6b-a03d-67cdd4e35c89",
-        "type": "video",
-        "is_ai": true,
-        "filename": "610385ad.mp4",
-        "url": "/static/videos/610385ad.mp4",
-        "dominant_color": "#0066d6"
     }
 ]
