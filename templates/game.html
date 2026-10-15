@@ -14,26 +14,29 @@
     <style>
         :root {
             color-scheme: dark;
-            --canvas-bg: #070a12;
-            --surface: #0e1424;
-            --surface-elevated: #151f38;
-            --line: rgba(255, 255, 255, 0.12);
-            --line-subtle: rgba(255, 255, 255, 0.07);
+            --canvas-bg: #030c1b;
+            --surface: #07152b;
+            --surface-elevated: #0c1f3c;
+            --line: rgba(0, 194, 203, 0.16);
+            --line-subtle: rgba(255, 255, 255, 0.08);
             --text-main: #f8fafc;
             --text-secondary: rgba(248, 250, 252, 0.75);
             --text-muted: rgba(248, 250, 252, 0.48);
 
             /* Dynamic Image-Based Ambient Glow Colors (Adaptive Theming) */
-            --ambient-color: #2563eb;
-            --ambient-rgb: 37, 99, 235;
-            --glow-ambient: rgba(37, 99, 235, 0.22);
-            --glow-ambient-soft: rgba(59, 130, 246, 0.1);
+            --ambient-color: #0066d6;
+            --ambient-rgb: 0, 102, 214;
+            --glow-ambient: rgba(0, 102, 214, 0.18);
+            --glow-ambient-soft: rgba(0, 194, 203, 0.06);
 
-            /* Action Accents (Electric Cobalt, Cyan, Azure) */
-            --accent-blue-main: #2563eb;
-            --accent-blue-hover: #3b82f6;
-            --accent-cyan: #06b6d4;
-            --accent-indigo: #4f46e5;
+            /* Action Accents (ConvergeIT 2026: Deep Navy, Royal Blue, Electric Cyan/Teal, Emerald) */
+            --converge-navy: #002f6c;
+            --accent-blue-main: #0066d6;
+            --accent-blue-hover: #0077ed;
+            --accent-cyan: #00c2cb;
+            --accent-teal: #00b4d8;
+            --accent-green: #10b981;
+            --accent-indigo: #004ba0;
 
             /* Card Geometry */
             --card-radius: clamp(20px, 2.4vw, 28px);
@@ -57,11 +60,12 @@
             font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
             color: var(--text-main);
 
-            /* Deep, Atmospheric Dark Canvas */
+            /* Deep ConvergeIT Oceanic Tech Navy Canvas */
             background-color: var(--canvas-bg);
             background-image:
-                radial-gradient(ellipse 75% 55% at 50% 32%, rgba(var(--ambient-rgb), 0.08) 0%, rgba(10, 16, 32, 0.98) 58%, #05070f 100%),
-                radial-gradient(circle at 50% 100%, rgba(var(--ambient-rgb), 0.04) 0%, transparent 60%);
+                radial-gradient(ellipse 85% 55% at 20% 25%, rgba(0, 102, 214, 0.08) 0%, transparent 65%),
+                radial-gradient(ellipse 70% 50% at 85% 80%, rgba(0, 194, 203, 0.06) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, #030c1b 0%, #020710 100%);
             background-attachment: fixed;
             transition: background-image 0.8s ease;
         }
@@ -1048,13 +1052,14 @@
                 Loading Challenge...
             </button>
             <a href="/leaderboard" class="start-secondary-btn" id="start-leaderboard-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-                    <path d="M4 22h16"/>
-                    <path d="M10 14.66V17c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-2.34"/>
-                    <path d="M14 14.66V17c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-2.34"/>
-                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path d="M4 22h16" />
+                    <path d="M10 14.66V17c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-2.34" />
+                    <path d="M14 14.66V17c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-2.34" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
                 </svg>
                 Leaderboard
             </a>
