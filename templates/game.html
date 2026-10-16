@@ -1410,19 +1410,92 @@
         let timerInterval;
         let isGameActive = false;
         let dataLoaded = false;
+        let cachedLeaderboardScores = null;
+
+        // Pre-fetch scores in background right at startup so leaderboard is ready
+        fetch('/api/scores?t=' + Date.now())
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+                if (Array.isArray(data)) cachedLeaderboardScores = data;
+            })
+            .catch(() => {});
+
+        function preloadMediaItem(item) {
+            if (!item || !item.url) return Promise.resolve(null);
+            const isText = item.type === 'text' || (!item.url && (item.text_content || item.content || item.text));
+            const isVideo = item.type === 'video' || (item.url && anyVideoExtension(item.url));
+
+            if (isText) return Promise.resolve(null);
+
+            if (isVideo) {
+                return new Promise(resolve => {
+                    const video = document.createElement('video');
+                    video.preload = 'auto';
+                    video.muted = true;
+                    video.playsInline = true;
+                    let finished = false;
+                    const done = () => {
+                        if (!finished) {
+                            finished = true;
+                            resolve(video);
+                        }
+                    };
+                    video.onloadedmetadata = done;
+                    video.oncanplay = done;
+                    video.onerror = done;
+                    video.src = item.url;
+                    setTimeout(done, 3000);
+                });
+            }
+
+            // Image preloading with hardware-accelerated decode
+            return new Promise(resolve => {
+                const img = new Image();
+                let finished = false;
+                const done = () => {
+                    if (!finished) {
+                        finished = true;
+                        resolve(img);
+                    }
+                };
+
+                img.onload = () => {
+                    if (img.decode) {
+                        img.decode().then(done).catch(done);
+                    } else {
+                        done();
+                    }
+                };
+                img.onerror = done;
+                img.src = item.url;
+
+                if (img.complete && img.naturalWidth > 0) {
+                    if (img.decode) {
+                        img.decode().then(done).catch(done);
+                    } else {
+                        done();
+                    }
+                }
+
+                // 3.5s safeguard timeout so slow connection doesn't lock the game button forever
+                setTimeout(done, 3500);
+            });
+        }
+
+        const startBtn = document.getElementById('start-btn');
 
         fetch('/api/questions')
             .then(res => {
                 if (!res.ok) throw new Error(`Question request failed (${res.status})`);
                 return res.json();
             })
-            .then(data => {
+            .then(async data => {
                 const loadingElem = document.getElementById('loading');
                 if (loadingElem) loadingElem.remove();
 
                 if (!Array.isArray(data) || data.length === 0) {
                     showLoadMessage('No challenge questions available yet.');
-                    document.getElementById('start-btn').innerText = 'No Questions Available';
+                    if (startBtn) startBtn.innerText = 'No Questions Available';
                     return;
                 }
                 questions = data;
@@ -1430,19 +1503,58 @@
                 document.getElementById('total-idx').innerText = totalQuestions;
 
                 initPagination();
+
+                // Show asset loading state on start button
+                if (startBtn) {
+                    startBtn.innerText = 'Loading Images...';
+                    startBtn.disabled = true;
+                }
+
+                // Preload media: ensure Question 0 (top card) and Question 1 (flank preview) are ready
+                const mediaItems = questions.filter(q => q.url && q.type !== 'text');
+                const totalMedia = mediaItems.length;
+
+                if (totalMedia > 0) {
+                    let loadedCount = 0;
+                    const criticalItems = questions.slice(0, 2).filter(q => q.url && q.type !== 'text');
+
+                    const preloadPromises = mediaItems.map(q => {
+                        return preloadMediaItem(q).then(res => {
+                            loadedCount++;
+                            if (startBtn && startBtn.disabled) {
+                                startBtn.innerText = `Loading Images (${loadedCount}/${totalMedia})...`;
+                            }
+                            return res;
+                        });
+                    });
+
+                    // Ensure the critical first image(s) are fully loaded and decoded into memory
+                    if (criticalItems.length > 0) {
+                        await Promise.all(criticalItems.map(q => preloadMediaItem(q)));
+                    }
+
+                    // Also wait for the rest of the deck up to a 2.5s window
+                    await Promise.race([
+                        Promise.all(preloadPromises),
+                        new Promise(resolve => setTimeout(resolve, 2500))
+                    ]);
+                }
+
+                // Now render cards — since images are decoded, adaptCardToImage applies correct dimensions immediately
                 renderCards();
                 updateFlankPreviews();
 
                 dataLoaded = true;
-                const startBtn = document.getElementById('start-btn');
-                startBtn.innerText = 'Start Challenge';
-                startBtn.disabled = false;
+                if (startBtn) {
+                    startBtn.innerText = 'Start Challenge';
+                    startBtn.disabled = false;
+                }
             })
             .catch(error => {
                 console.error('Could not load game questions:', error);
                 document.getElementById('loading')?.remove();
                 showLoadMessage('Questions could not be loaded. Please refresh to try again.');
-                document.getElementById('start-btn').innerText = 'Unable to Load';
+                if (startBtn) startBtn.innerText = 'Unable to Load';
             });
 
         function showLoadMessage(message) {
@@ -1488,6 +1600,7 @@
             if (!dataLoaded) return;
             startScreen.classList.add('is-hidden');
             isGameActive = true;
+            updateAllCardSizes();
             gameStartTime = performance.now();
             startTimer();
             playActiveCardVideo();
@@ -2088,16 +2201,24 @@
             fetchAndRenderMiniLeaderboard();
         }
 
-        async function fetchAndRenderMiniLeaderboard() {
+        async function fetchAndRenderMiniLeaderboard(forceRefresh = false) {
             const table = document.getElementById('result-leaderboard-table');
             const tbody = document.getElementById('result-leaderboard-body');
             const statusEl = document.getElementById('result-leaderboard-status');
             if (!tbody) return;
 
             try {
-                const res = await fetch('/api/scores?t=' + Date.now());
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
+                let data = null;
+                if (!forceRefresh && cachedLeaderboardScores && cachedLeaderboardScores.length > 0) {
+                    data = cachedLeaderboardScores;
+                } else {
+                    const res = await fetch('/api/scores?t=' + Date.now());
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    data = await res.json();
+                    if (Array.isArray(data)) {
+                        cachedLeaderboardScores = data;
+                    }
+                }
 
                 if (!Array.isArray(data) || data.length === 0) {
                     if (statusEl) {
@@ -2184,7 +2305,7 @@
                     document.getElementById('submit-section').classList.add('is-hidden');
                     document.getElementById('success-msg').classList.remove('is-hidden');
                     // Refresh the leaderboard table asynchronously with the newly posted score
-                    fetchAndRenderMiniLeaderboard();
+                    fetchAndRenderMiniLeaderboard(true);
                 })
                 .catch(err => {
                     console.warn('Score submission error:', err);
