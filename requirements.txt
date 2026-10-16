@@ -1,1 +1,4 @@
-Flask==3.0.3
+Flask>=3.0,<4.0
+Pillow>=10.0,<13.0
+SQLAlchemy>=2.0,<3.0
+psycopg[binary]>=3.2,<4.0

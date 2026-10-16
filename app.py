@@ -2,29 +2,166 @@ import os
 import json
 import uuid
 import random
+from pathlib import Path
+from typing import Optional
+
 from flask import Flask, request, jsonify, render_template
+from sqlalchemy import Integer, String, case, create_engine, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 app = Flask(__name__)
 
-# File Paths
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'images')
-VIDEO_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'videos')
-DATA_FILE = os.path.join(os.path.dirname(__file__), 'data.json')
-SCORES_FILE = os.path.join(os.path.dirname(__file__), 'scores.json')
+# File paths. Questions remain in data.json; leaderboard scores use a database.
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_FOLDER = str(BASE_DIR / 'static' / 'images')
+VIDEO_FOLDER = str(BASE_DIR / 'static' / 'videos')
+DATA_FILE = str(BASE_DIR / 'data.json')
+LEGACY_SCORES_FILE = BASE_DIR / 'scores.json'  # Read only for one-time migration.
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['VIDEO_FOLDER'] = VIDEO_FOLDER
 
-# Ensure directories and JSON files exist
+# Ensure directories and the questions JSON file exist.
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
+
 def init_json_file(filepath):
     if not os.path.exists(filepath):
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump([], f)
 
+
 init_json_file(DATA_FILE)
-init_json_file(SCORES_FILE)
+
+
+def get_database_url():
+    """Use Vercel's configured cloud database; otherwise use local SQLite."""
+    for key in (
+        'DATABASE_URL',
+        'POSTGRES_URL',
+        'POSTGRES_PRISMA_URL',
+        'POSTGRES_URL_NON_POOLING',
+        'NEON_DATABASE_URL',
+    ):
+        value = os.getenv(key)
+        if value:
+            # SQLAlchemy 2 uses the psycopg 3 driver installed in requirements.txt.
+            if value.startswith('postgres://'):
+                return value.replace('postgres://', 'postgresql+psycopg://', 1)
+            if value.startswith('postgresql://'):
+                return value.replace('postgresql://', 'postgresql+psycopg://', 1)
+            return value
+
+    # Never silently use Vercel's temporary filesystem for leaderboard data.
+    if os.getenv('VERCEL') == '1':
+        raise RuntimeError(
+            'No cloud database URL was found. Connect your database in Vercel and '
+            'make sure DATABASE_URL or POSTGRES_URL is available to the deployment.'
+        )
+
+    # Local development automatically creates scores.db beside this file.
+    return f"sqlite:///{(BASE_DIR / 'scores.db').as_posix()}"
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class LeaderboardScore(Base):
+    __tablename__ = 'leaderboard_scores'
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(20), nullable=False, default='Student')
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    time: Mapped[str] = mapped_column(String(32), nullable=False, default='00:00.000')
+    time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+
+database_url = get_database_url()
+engine_options = {'pool_pre_ping': True}
+if database_url.startswith('sqlite:'):
+    engine_options['connect_args'] = {'check_same_thread': False}
+engine = create_engine(database_url, **engine_options)
+SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def leaderboard_order():
+    """Highest score first, then fastest time; untimed entries appear last."""
+    return (
+        LeaderboardScore.score.desc(),
+        case((LeaderboardScore.time_ms.is_(None), 1), else_=0),
+        LeaderboardScore.time_ms.asc(),
+        LeaderboardScore.id.asc(),
+    )
+
+
+def score_to_dict(score):
+    return {
+        'id': score.id,
+        'name': score.name,
+        'score': score.score,
+        'total': score.total,
+        'time': score.time,
+        'time_ms': score.time_ms,
+    }
+
+
+def migrate_legacy_scores():
+    """Import existing scores.json once, if it exists and the DB is still empty."""
+    if not LEGACY_SCORES_FILE.exists():
+        return
+
+    try:
+        with LEGACY_SCORES_FILE.open('r', encoding='utf-8') as file:
+            old_scores = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return
+
+    if not isinstance(old_scores, list) or not old_scores:
+        return
+
+    try:
+        with SessionLocal() as session:
+            if session.scalar(select(LeaderboardScore.id).limit(1)) is not None:
+                return
+
+            imported = []
+            for item in old_scores:
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    score_value = int(item.get('score', 0))
+                    total_value = int(item.get('total', 10))
+                    raw_time_ms = item.get('time_ms')
+                    time_ms_value = int(raw_time_ms) if raw_time_ms not in (None, '') else None
+                except (TypeError, ValueError):
+                    continue
+
+                imported.append(LeaderboardScore(
+                    id=str(item.get('id') or uuid.uuid4()),
+                    name=str(item.get('name') or 'Student').strip()[:20] or 'Student',
+                    score=score_value,
+                    total=total_value,
+                    time=str(item.get('time') or '00:00.000'),
+                    time_ms=time_ms_value,
+                ))
+
+            if imported:
+                session.add_all(imported)
+                session.commit()
+    except IntegrityError:
+        # A simultaneous serverless startup may have completed the same import.
+        with SessionLocal() as session:
+            session.rollback()
+    except SQLAlchemyError:
+        # The app can still start; database errors will be reported by API routes.
+        app.logger.exception('Could not migrate legacy scores.json into the database.')
+
+
+Base.metadata.create_all(engine)
+migrate_legacy_scores()
 
 def parse_boolean(val):
     """Safely parse boolean from bool, string, or number."""
@@ -110,43 +247,60 @@ def get_questions():
 def submit_score():
     req_data = request.get_json(silent=True) or request.form
     if not req_data:
-        return jsonify({"error": "Invalid request"}), 400
-        
-    try:
-        with open(SCORES_FILE, 'r') as f:
-            scores = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        scores = []
-        
-    new_score = {
-        "id": str(uuid.uuid4()),
-        "name": str(req_data.get("name", "Student")).strip()[:20],
-        "score": int(req_data.get("score", 0)),
-        "total": int(req_data.get("total", 10)),
-        "time": str(req_data.get("time", "00:00.000")),
-        "time_ms": int(req_data.get("time_ms", 0)) if req_data.get("time_ms") else None
-    }
-    
-    scores.append(new_score)
-    # Sort by score descending, then by fastest time_ms ascending (break ties by speed)
-    scores = sorted(scores, key=lambda x: (-x.get('score', 0), x.get('time_ms') if x.get('time_ms') is not None else 99999999))
+        return jsonify({'error': 'Invalid request'}), 400
 
-    with open(SCORES_FILE, 'w') as f:
-        json.dump(scores, f, indent=4)
-        
-    return jsonify({"success": True, "position": scores.index(new_score) + 1}), 200
+    try:
+        score_value = int(req_data.get('score', 0))
+        total_value = int(req_data.get('total', 10))
+        raw_time_ms = req_data.get('time_ms')
+        time_ms_value = int(raw_time_ms) if raw_time_ms not in (None, '') else None
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Score, total, and time_ms must be valid numbers.'}), 400
+
+    if score_value < 0 or total_value < 0 or (time_ms_value is not None and time_ms_value < 0):
+        return jsonify({'error': 'Score, total, and time_ms cannot be negative.'}), 400
+
+    player_name = str(req_data.get('name') or 'Student').strip()[:20] or 'Student'
+    new_score = LeaderboardScore(
+        id=str(uuid.uuid4()),
+        name=player_name,
+        score=score_value,
+        total=total_value,
+        time=str(req_data.get('time') or '00:00.000')[:32],
+        time_ms=time_ms_value,
+    )
+
+    try:
+        with SessionLocal() as session:
+            session.add(new_score)
+            session.commit()
+
+            sorted_scores = session.scalars(
+                select(LeaderboardScore).order_by(*leaderboard_order())
+            ).all()
+            position = next(
+                index for index, item in enumerate(sorted_scores, start=1)
+                if item.id == new_score.id
+            )
+
+        return jsonify({'success': True, 'position': position}), 200
+    except SQLAlchemyError:
+        app.logger.exception('Could not save leaderboard score.')
+        return jsonify({'error': 'Unable to save the score right now. Please try again.'}), 500
+
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
-    # Public endpoint to view the leaderboard
+    """Return leaderboard entries from the configured database."""
     try:
-        with open(SCORES_FILE, 'r') as f:
-            scores = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        scores = []
-    # Ensure scores are sorted: score DESC, then time_ms ASC (non-timed entries sorted to end)
-    sorted_scores = sorted(scores, key=lambda x: (-int(x.get('score', 0)), x.get('time_ms') if x.get('time_ms') is not None else 99999999))
-    return jsonify(sorted_scores)
+        with SessionLocal() as session:
+            scores = session.scalars(
+                select(LeaderboardScore).order_by(*leaderboard_order())
+            ).all()
+            return jsonify([score_to_dict(score) for score in scores])
+    except SQLAlchemyError:
+        app.logger.exception('Could not load leaderboard scores.')
+        return jsonify({'error': 'Unable to load the leaderboard right now.'}), 500
 
 
 # ==========================================
