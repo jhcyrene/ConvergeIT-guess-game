@@ -2188,6 +2188,13 @@
                 document.getElementById('final-accuracy').innerText = `${pct}%`;
             }
 
+            // Generate unique submission session ID for this completed challenge
+            currentGameSessionId = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : 'game-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+            isScoreSubmitting = false;
+            hasScoreBeenSubmitted = false;
+
             const endScreen = document.getElementById('end-screen');
             endScreen.classList.remove('is-hidden');
             endScreen.style.opacity = '0';
@@ -2276,20 +2283,31 @@
             }
         }
 
+        let currentGameSessionId = null;
+        let isScoreSubmitting = false;
+        let hasScoreBeenSubmitted = false;
+
         window.submitScore = function () {
+            if (isScoreSubmitting || hasScoreBeenSubmitted) return;
+
             const nameInput = document.getElementById('player-name');
-            const name = nameInput.value.trim() || "Student";
+            const name = (nameInput ? nameInput.value.trim() : '') || "Student";
             const btn = document.getElementById('save-score-btn') || document.querySelector('#submit-section button');
             const errorNotice = document.getElementById('save-error-notice');
 
-            btn.disabled = true;
-            btn.innerText = "Saving Record...";
+            isScoreSubmitting = true;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "Saving Record...";
+            }
+            if (nameInput) nameInput.disabled = true;
             if (errorNotice) errorNotice.classList.add('is-hidden');
 
             fetch('/api/submit_score', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    id: currentGameSessionId,
                     name: name,
                     score: score,
                     total: totalQuestions,
@@ -2302,6 +2320,8 @@
                     return res.json();
                 })
                 .then(data => {
+                    hasScoreBeenSubmitted = true;
+                    isScoreSubmitting = false;
                     document.getElementById('submit-section').classList.add('is-hidden');
                     document.getElementById('success-msg').classList.remove('is-hidden');
                     // Refresh the leaderboard table asynchronously with the newly posted score
@@ -2309,14 +2329,26 @@
                 })
                 .catch(err => {
                     console.warn('Score submission error:', err);
-                    // Reset the button so the player can retry or proceed
-                    btn.disabled = false;
-                    btn.innerText = "Retry Saving";
+                    // Reset the button so the player can retry if it was an actual network error
+                    isScoreSubmitting = false;
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "Retry Saving";
+                    }
+                    if (nameInput) nameInput.disabled = false;
                     if (errorNotice) {
                         errorNotice.classList.remove('is-hidden');
                     }
                 });
         };
+
+        // Allow pressing Enter in the name input field to submit score
+        document.getElementById('player-name')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitScore();
+            }
+        });
 
         window.addEventListener('resize', updateAllCardSizes);
         if (window.ResizeObserver && container) {

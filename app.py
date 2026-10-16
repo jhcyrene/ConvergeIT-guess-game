@@ -2,6 +2,8 @@ import os
 import json
 import uuid
 import random
+import time
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -320,6 +322,42 @@ def get_questions():
     
     return jsonify(selected_questions)
 
+# ==========================================
+# DUPLICATE SUBMISSION SAFEGUARD
+# ==========================================
+_submission_lock = threading.Lock()
+_recent_score_submissions = {}
+
+def check_and_record_duplicate(score_id, player_name, score, total, time_ms):
+    """Detect duplicate score uploads within a 90-second window."""
+    now = time.time()
+    payload_key = (player_name.lower().strip(), score, total, time_ms)
+    with _submission_lock:
+        # Prune expired entries
+        expired = [k for k, v in _recent_score_submissions.items() if now - v.get('timestamp', 0) > 90]
+        for k in expired:
+            _recent_score_submissions.pop(k, None)
+
+        if score_id and score_id in _recent_score_submissions:
+            entry = _recent_score_submissions[score_id]
+            return True, entry.get('position', 1)
+
+        if payload_key in _recent_score_submissions:
+            entry = _recent_score_submissions[payload_key]
+            return True, entry.get('position', 1)
+
+    return False, None
+
+def cache_submission(score_id, player_name, score, total, time_ms, position):
+    now = time.time()
+    payload_key = (player_name.lower().strip(), score, total, time_ms)
+    entry = {'timestamp': now, 'position': position}
+    with _submission_lock:
+        if score_id:
+            _recent_score_submissions[score_id] = entry
+        _recent_score_submissions[payload_key] = entry
+
+
 @app.route('/api/submit_score', methods=['POST'])
 def submit_score():
     req_data = request.get_json(silent=True) or request.form
@@ -338,14 +376,29 @@ def submit_score():
         return jsonify({'error': 'Score, total, and time_ms cannot be negative.'}), 400
 
     player_name = str(req_data.get('name') or 'Student').strip()[:20] or 'Student'
-    score_id = str(uuid.uuid4())
+    provided_id = str(req_data.get('id') or '').strip()
+    score_id = provided_id if (provided_id and len(provided_id) <= 64) else str(uuid.uuid4())
     time_str = str(req_data.get('time') or '00:00.000')[:32]
+
+    # Fast in-memory deduplication check (prevents double-clicks, spam, and rapid retries)
+    is_dup, cached_pos = check_and_record_duplicate(score_id, player_name, score_value, total_value, time_ms_value)
+    if is_dup:
+        app.logger.info(f"Duplicate score submission detected and prevented for {player_name} (id={score_id}).")
+        return jsonify({'success': True, 'position': cached_pos or 1, 'duplicate': True}), 200
 
     # 1. Always record in local SQLite (guaranteed offline fallback)
     local_saved = False
     local_position = 1
     try:
         with LocalSession() as local_session:
+            # Check if this score ID already exists in local DB
+            existing = local_session.scalar(select(LeaderboardScore).where(LeaderboardScore.id == score_id))
+            if existing:
+                all_local = local_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+                local_position = next((idx for idx, item in enumerate(all_local, start=1) if item.id == score_id), 1)
+                cache_submission(score_id, player_name, score_value, total_value, time_ms_value, local_position)
+                return jsonify({'success': True, 'position': local_position, 'duplicate': True}), 200
+
             local_entry = LeaderboardScore(
                 id=score_id,
                 name=player_name,
@@ -359,6 +412,7 @@ def submit_score():
             all_local = local_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
             local_position = next((idx for idx, item in enumerate(all_local, start=1) if item.id == score_id), 1)
             local_saved = True
+            cache_submission(score_id, player_name, score_value, total_value, time_ms_value, local_position)
     except Exception as e:
         app.logger.warning(f"Could not record score in local SQLite: {e}")
 
@@ -366,6 +420,13 @@ def submit_score():
     if remote_engine and RemoteSession:
         try:
             with RemoteSession() as remote_session:
+                existing_remote = remote_session.scalar(select(LeaderboardScore).where(LeaderboardScore.id == score_id))
+                if existing_remote:
+                    all_remote = remote_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+                    remote_position = next((idx for idx, item in enumerate(all_remote, start=1) if item.id == score_id), 1)
+                    cache_submission(score_id, player_name, score_value, total_value, time_ms_value, remote_position)
+                    return jsonify({'success': True, 'position': remote_position, 'storage': 'cloud', 'duplicate': True}), 200
+
                 remote_entry = LeaderboardScore(
                     id=score_id,
                     name=player_name,
@@ -378,6 +439,7 @@ def submit_score():
                 remote_session.commit()
                 all_remote = remote_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
                 remote_position = next((idx for idx, item in enumerate(all_remote, start=1) if item.id == score_id), 1)
+                cache_submission(score_id, player_name, score_value, total_value, time_ms_value, remote_position)
                 return jsonify({'success': True, 'position': remote_position, 'storage': 'cloud'}), 200
         except Exception as e:
             app.logger.warning(f"Could not save score to cloud DB ({e}). Falling back to local standing.")
@@ -391,11 +453,18 @@ def submit_score():
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
+    limit_val = request.args.get('limit', default=100, type=int)
+    if limit_val is not None and limit_val <= 0:
+        limit_val = 100
+
     # 1. Try cloud database first if configured
     if remote_engine and RemoteSession:
         try:
             with RemoteSession() as session:
-                scores = session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+                query = select(LeaderboardScore).order_by(*leaderboard_order())
+                if limit_val:
+                    query = query.limit(limit_val)
+                scores = session.scalars(query).all()
                 return jsonify([score_to_dict(score) for score in scores])
         except Exception as e:
             app.logger.warning(f"Cloud DB read error ({e}). Falling back to local SQLite.")
@@ -403,7 +472,10 @@ def get_scores():
     # 2. Seamless fallback to local SQLite
     try:
         with LocalSession() as session:
-            scores = session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+            query = select(LeaderboardScore).order_by(*leaderboard_order())
+            if limit_val:
+                query = query.limit(limit_val)
+            scores = session.scalars(query).all()
             return jsonify([score_to_dict(score) for score in scores])
     except SQLAlchemyError:
         app.logger.exception('Could not load local leaderboard scores.')
