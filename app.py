@@ -7,60 +7,79 @@ from typing import Optional
 
 from flask import Flask, request, jsonify, render_template
 from sqlalchemy import Integer, String, case, create_engine, select
+from sqlalchemy.pool import NullPool
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 app = Flask(__name__)
 
-# File paths. Questions remain in data.json; leaderboard scores use a database.
+# ==========================================
+# FILE SYSTEM SETUP
+# ==========================================
 BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_FOLDER = str(BASE_DIR / 'static' / 'images')
-VIDEO_FOLDER = str(BASE_DIR / 'static' / 'videos')
+
+# On Vercel, the filesystem is Read-Only. We must route temp uploads to /tmp.
+# WARNING: Files saved to /tmp do not persist across serverless invocations. 
+if os.getenv('VERCEL') == '1':
+    UPLOAD_FOLDER = '/tmp/images'
+    VIDEO_FOLDER = '/tmp/videos'
+else:
+    UPLOAD_FOLDER = str(BASE_DIR / 'static' / 'images')
+    VIDEO_FOLDER = str(BASE_DIR / 'static' / 'videos')
+
 DATA_FILE = str(BASE_DIR / 'data.json')
-LEGACY_SCORES_FILE = BASE_DIR / 'scores.json'  # Read only for one-time migration.
+LEGACY_SCORES_FILE = BASE_DIR / 'scores.json'
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['VIDEO_FOLDER'] = VIDEO_FOLDER
 
-# Ensure directories and the questions JSON file exist.
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(VIDEO_FOLDER, exist_ok=True)
-
+# Safely ensure directories exist
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(VIDEO_FOLDER, exist_ok=True)
+except OSError:
+    pass
 
 def init_json_file(filepath):
     if not os.path.exists(filepath):
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump([], f)
-
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+        except OSError:
+            # Safely pass if Vercel blocks writing to the root directory
+            pass
 
 init_json_file(DATA_FILE)
 
-
+# ==========================================
+# DATABASE SETUP
+# ==========================================
 def get_database_url():
     """Use Vercel's configured cloud database; otherwise use local SQLite."""
+    # Prioritize POSTGRES_URL_NON_POOLING first to avoid PgBouncer conflicts
     for key in (
         'DATABASE_URL',
+        'POSTGRES_URL_NON_POOLING',
         'POSTGRES_URL',
         'POSTGRES_PRISMA_URL',
-        'POSTGRES_URL_NON_POOLING',
         'NEON_DATABASE_URL',
     ):
         value = os.getenv(key)
         if value:
-            # SQLAlchemy 2 uses the psycopg 3 driver installed in requirements.txt.
+            # SQLAlchemy 2 uses the psycopg 3 driver
             if value.startswith('postgres://'):
                 return value.replace('postgres://', 'postgresql+psycopg://', 1)
             if value.startswith('postgresql://'):
                 return value.replace('postgresql://', 'postgresql+psycopg://', 1)
             return value
 
-    # Never silently use Vercel's temporary filesystem for leaderboard data.
     if os.getenv('VERCEL') == '1':
         raise RuntimeError(
             'No cloud database URL was found. Connect your database in Vercel and '
             'make sure DATABASE_URL or POSTGRES_URL is available to the deployment.'
         )
 
-    # Local development automatically creates scores.db beside this file.
+    # Local development automatically creates scores.db
     return f"sqlite:///{(BASE_DIR / 'scores.db').as_posix()}"
 
 
@@ -80,9 +99,16 @@ class LeaderboardScore(Base):
 
 
 database_url = get_database_url()
-engine_options = {'pool_pre_ping': True}
+engine_options = {}
+
 if database_url.startswith('sqlite:'):
     engine_options['connect_args'] = {'check_same_thread': False}
+else:
+    # Fix Serverless Freezing: Disable SQLAlchemy's connection pool
+    engine_options['poolclass'] = NullPool
+    # Fix Prepared Statement Crashes: Disable psycopg3 prepared statements
+    engine_options['connect_args'] = {'prepare_threshold': None}
+
 engine = create_engine(database_url, **engine_options)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
@@ -152,19 +178,20 @@ def migrate_legacy_scores():
                 session.add_all(imported)
                 session.commit()
     except IntegrityError:
-        # A simultaneous serverless startup may have completed the same import.
         with SessionLocal() as session:
             session.rollback()
     except SQLAlchemyError:
-        # The app can still start; database errors will be reported by API routes.
         app.logger.exception('Could not migrate legacy scores.json into the database.')
 
 
 Base.metadata.create_all(engine)
 migrate_legacy_scores()
 
+
+# ==========================================
+# HELPERS
+# ==========================================
 def parse_boolean(val):
-    """Safely parse boolean from bool, string, or number."""
     if isinstance(val, bool):
         return val
     if isinstance(val, (int, float)):
@@ -174,7 +201,6 @@ def parse_boolean(val):
     return False
 
 def extract_dominant_color(filepath):
-    """Extract dominant or representative vibrant hex color from image for ambient theming."""
     try:
         from PIL import Image
         with Image.open(filepath) as img:
@@ -182,7 +208,6 @@ def extract_dominant_color(filepath):
             img = img.resize((24, 24))
             colors = img.getcolors(24 * 24)
             if colors:
-                # Prefer rich vibrant colors for ambient glow
                 vibrant = [c for c in colors if 35 < sum(c[1])/3 < 225]
                 best = max(vibrant or colors, key=lambda c: c[0])[1]
                 return f"#{best[0]:02x}{best[1]:02x}{best[2]:02x}"
@@ -190,18 +215,16 @@ def extract_dominant_color(filepath):
         pass
     return "#0066d6"
 
+
 # ==========================================
 # PUBLIC GAME ROUTES
 # ==========================================
-
 @app.route('/')
 def game_index():
-    # The main URL loads the student guessing game
     return render_template('game.html')
 
 @app.route('/leaderboard')
 def leaderboard():
-    # Dedicated leaderboard page displaying player rankings
     return render_template('leaderboard.html')
 
 @app.route('/api/questions', methods=['GET'])
@@ -209,7 +232,7 @@ def get_questions():
     try:
         with open(DATA_FILE, 'r') as f:
             data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
         return jsonify([])
 
     valid_data = []
@@ -291,7 +314,6 @@ def submit_score():
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
-    """Return leaderboard entries from the configured database."""
     try:
         with SessionLocal() as session:
             scores = session.scalars(
@@ -306,19 +328,15 @@ def get_scores():
 # ==========================================
 # SECURE ADMIN DASHBOARD & QUESTION MANAGEMENT
 # ==========================================
-
 @app.route('/upload', methods=['GET'])
 def upload_dashboard():
-    # Admin dashboard: accessible directly or via ?true=true
     return render_template('upload.html')
 
 @app.route('/api/upload', methods=['POST'])
 def api_upload():
-    # Parse incoming JSON (if provided) or Form Data
     json_data = request.get_json(silent=True) or {}
     form_data = request.form
 
-    # Check authorization (accepts query param, form, json, header, referrer, or direct access)
     is_authorized = (
         request.args.get('true') == 'true' or
         request.args.get('admin') == 'true' or
@@ -330,7 +348,6 @@ def api_upload():
     if not is_authorized:
         return jsonify({"error": "Unauthorized"}), 403
 
-    # Extract text content from any common field name
     text_content = (
         form_data.get('text_content') or
         form_data.get('content') or
@@ -343,7 +360,6 @@ def api_upload():
         ''
     ).strip()
 
-    # Safely check whether an actual media file was provided
     uploaded_file = (
         request.files.get('video') or
         request.files.get('image') or
@@ -352,7 +368,6 @@ def api_upload():
     filename_lower = (uploaded_file.filename if uploaded_file else '').lower()
     is_video_file = bool(uploaded_file and any(filename_lower.endswith(ext) for ext in ('.mp4', '.webm', '.mov', '.ogg', '.m4v')))
 
-    # Determine question type
     raw_type = (form_data.get('type') or json_data.get('type') or '').strip().lower()
     if raw_type == 'video' or is_video_file:
         entry_type = 'video'
@@ -367,7 +382,6 @@ def api_upload():
     else:
         entry_type = 'text' if text_content else 'image'
 
-    # Safely parse is_ai (works with booleans, strings, ints)
     raw_is_ai = form_data.get('is_ai') if 'is_ai' in form_data else json_data.get('is_ai', False)
     is_ai = parse_boolean(raw_is_ai)
 
@@ -384,7 +398,11 @@ def api_upload():
         ext = uploaded_file.filename.rsplit('.', 1)[1].lower() if '.' in uploaded_file.filename else 'mp4'
         filename = f"{uuid.uuid4().hex[:8]}.{ext}"
         filepath = os.path.join(app.config['VIDEO_FOLDER'], filename)
-        uploaded_file.save(filepath)
+        
+        try:
+            uploaded_file.save(filepath)
+        except OSError:
+            return jsonify({"error": "Filesystem error: could not save file"}), 500
 
         new_entry["filename"] = filename
         new_entry["url"] = f"/static/videos/{filename}"
@@ -397,11 +415,15 @@ def api_upload():
         ext = uploaded_file.filename.rsplit('.', 1)[1].lower() if '.' in uploaded_file.filename else 'png'
         filename = f"{uuid.uuid4().hex[:8]}.{ext}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        uploaded_file.save(filepath)
+        
+        try:
+            uploaded_file.save(filepath)
+            new_entry["dominant_color"] = extract_dominant_color(filepath)
+        except OSError:
+            return jsonify({"error": "Filesystem error: could not save file"}), 500
 
         new_entry["filename"] = filename
         new_entry["url"] = f"/static/images/{filename}"
-        new_entry["dominant_color"] = extract_dominant_color(filepath)
         
     elif entry_type == 'text':
         if not text_content:
@@ -415,19 +437,21 @@ def api_upload():
     with open(DATA_FILE, 'r') as f:
         try:
             data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
             data = []
     
     data.append(new_entry)
 
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except OSError:
+        pass # Safeguard for Vercel's read-only file system
 
     return jsonify({"success": True, "entry": new_entry}), 200
 
 @app.route('/api/add_text', methods=['POST'])
 def api_add_text():
-    """Convenience endpoint specifically for adding text questions via JSON or Form."""
     json_data = request.get_json(silent=True) or {}
     form_data = request.form
 
@@ -460,30 +484,32 @@ def api_add_text():
     with open(DATA_FILE, 'r') as f:
         try:
             data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
             data = []
 
     data.append(new_entry)
 
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except OSError:
+        pass # Safeguard for Vercel's read-only file system
 
     return jsonify({"success": True, "entry": new_entry}), 200
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    with open(DATA_FILE, 'r') as f:
-        try:
+    try:
+        with open(DATA_FILE, 'r') as f:
             return jsonify(json.load(f))
-        except (FileNotFoundError, json.JSONDecodeError):
-            return jsonify([])
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return jsonify([])
 
 @app.route('/api/update/<entry_id>', methods=['PATCH'])
 def update_entry(entry_id):
     json_data = request.get_json(silent=True) or {}
     form_data = request.form
 
-    # Check authorization
     is_authorized = (
         request.args.get('true') == 'true' or
         form_data.get('true') == 'true' or
@@ -501,7 +527,7 @@ def update_entry(entry_id):
     with open(DATA_FILE, 'r') as f:
         try:
             data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
             data = []
         
     entry_to_update = next((item for item in data if item['id'] == entry_id), None)
@@ -510,14 +536,16 @@ def update_entry(entry_id):
         if 'is_ai' in req_data:
             entry_to_update['is_ai'] = parse_boolean(req_data['is_ai'])
 
-        # Support updating text content
         if 'text_content' in req_data:
             entry_to_update['text_content'] = str(req_data['text_content']).strip()
         elif 'content' in req_data:
             entry_to_update['text_content'] = str(req_data['content']).strip()
             
-        with open(DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
+        try:
+            with open(DATA_FILE, 'w') as f:
+                json.dump(data, f, indent=4)
+        except OSError:
+            pass # Safeguard for Vercel's read-only file system
             
         return jsonify({"success": True, "entry": entry_to_update}), 200
     else:
@@ -536,7 +564,7 @@ def delete_entry(entry_id):
     with open(DATA_FILE, 'r') as f:
         try:
             data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
             data = []
 
     entry_to_delete = next((item for item in data if item['id'] == entry_id), None)
@@ -554,8 +582,12 @@ def delete_entry(entry_id):
                     pass
 
         data = [item for item in data if item['id'] != entry_id]
-        with open(DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=4)
+        
+        try:
+            with open(DATA_FILE, 'w') as f:
+                json.dump(data, f, indent=4)
+        except OSError:
+            pass # Safeguard for Vercel's read-only file system
 
         return jsonify({"success": True}), 200
     else:
