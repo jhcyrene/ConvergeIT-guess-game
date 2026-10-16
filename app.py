@@ -52,11 +52,49 @@ def init_json_file(filepath):
 init_json_file(DATA_FILE)
 
 # ==========================================
-# DATABASE SETUP
+# DATABASE SETUP & OFFLINE-RESILIENT FALLBACK
 # ==========================================
-def get_database_url():
-    """Use Vercel's configured cloud database; otherwise use local SQLite."""
-    # Prioritize POSTGRES_URL_NON_POOLING first to avoid PgBouncer conflicts
+def load_env_file():
+    """Load key-value pairs from .env into os.environ if present."""
+    env_path = BASE_DIR / '.env'
+    if env_path.exists():
+        try:
+            with open(env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, val = line.split('=', 1)
+                    key = key.strip()
+                    val = val.strip()
+                    if key:
+                        os.environ[key] = val
+        except Exception:
+            pass
+
+load_env_file()
+
+
+def sanitize_database_url(url: str) -> str:
+    """Normalize connection strings from env or CLI copy-pastes."""
+    if not url:
+        return ''
+    url = url.strip()
+    if url.startswith('psql '):
+        url = url[5:].strip()
+    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+        url = url[1:-1].strip()
+    # Strip channel_binding which can trigger Windows libpq/psycopg handshake errors
+    url = url.replace('&channel_binding=require', '').replace('channel_binding=require&', '').replace('channel_binding=require', '')
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql+psycopg://', 1)
+    elif url.startswith('postgresql://'):
+        url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    return url
+
+
+def get_remote_database_url():
+    """Retrieve configured cloud database URL from environment variables."""
     for key in (
         'DATABASE_URL',
         'POSTGRES_URL_NON_POOLING',
@@ -64,23 +102,12 @@ def get_database_url():
         'POSTGRES_PRISMA_URL',
         'NEON_DATABASE_URL',
     ):
-        value = os.getenv(key)
-        if value:
-            # SQLAlchemy 2 uses the psycopg 3 driver
-            if value.startswith('postgres://'):
-                return value.replace('postgres://', 'postgresql+psycopg://', 1)
-            if value.startswith('postgresql://'):
-                return value.replace('postgresql://', 'postgresql+psycopg://', 1)
-            return value
-
-    if os.getenv('VERCEL') == '1':
-        raise RuntimeError(
-            'No cloud database URL was found. Connect your database in Vercel and '
-            'make sure DATABASE_URL or POSTGRES_URL is available to the deployment.'
-        )
-
-    # Local development automatically creates scores.db
-    return f"sqlite:///{(BASE_DIR / 'scores.db').as_posix()}"
+        raw_val = os.getenv(key)
+        if raw_val:
+            cleaned = sanitize_database_url(raw_val)
+            if cleaned and not cleaned.startswith('sqlite:'):
+                return cleaned
+    return None
 
 
 class Base(DeclarativeBase):
@@ -98,19 +125,49 @@ class LeaderboardScore(Base):
     time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
 
-database_url = get_database_url()
-engine_options = {}
+# Local SQLite Database (Always ready as reliable offline fallback)
+LOCAL_DB_FILE = BASE_DIR / 'scores.db'
+LOCAL_DB_URL = f"sqlite:///{LOCAL_DB_FILE.as_posix()}"
+local_engine = create_engine(LOCAL_DB_URL, connect_args={'check_same_thread': False})
+LocalSession = sessionmaker(bind=local_engine, expire_on_commit=False)
 
-if database_url.startswith('sqlite:'):
-    engine_options['connect_args'] = {'check_same_thread': False}
-else:
-    # Fix Serverless Freezing: Disable SQLAlchemy's connection pool
-    engine_options['poolclass'] = NullPool
-    # Fix Prepared Statement Crashes: Disable psycopg3 prepared statements
-    engine_options['connect_args'] = {'prepare_threshold': None}
+# Cloud Database (e.g. Neon PostgreSQL)
+remote_db_url = get_remote_database_url()
+remote_engine = None
+RemoteSession = None
 
-engine = create_engine(database_url, **engine_options)
-SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+if remote_db_url:
+    try:
+        # connect_timeout=3 prevents hanging/blocking on startup when offline
+        remote_engine = create_engine(
+            remote_db_url,
+            poolclass=NullPool,
+            connect_args={'prepare_threshold': None, 'connect_timeout': 3}
+        )
+        RemoteSession = sessionmaker(bind=remote_engine, expire_on_commit=False)
+    except Exception as e:
+        app.logger.warning(f"Could not build remote DB engine: {e}")
+        remote_engine = None
+        RemoteSession = None
+
+# Always prepare local SQLite tables
+try:
+    Base.metadata.create_all(local_engine)
+except Exception as e:
+    app.logger.warning(f"Local SQLite schema error: {e}")
+
+# Check remote connection & create schema if reachable
+is_cloud_active = False
+if remote_engine is not None:
+    try:
+        with remote_engine.connect() as test_conn:
+            test_conn.execute(select(1))
+        Base.metadata.create_all(remote_engine)
+        is_cloud_active = True
+        print("[DATABASE] Successfully connected to cloud database (Neon/Postgres).")
+    except Exception as err:
+        is_cloud_active = False
+        print(f"[DATABASE] Cloud database unreachable ({err}). Seamlessly using local SQLite fallback.")
 
 
 def leaderboard_order():
@@ -148,43 +205,40 @@ def migrate_legacy_scores():
     if not isinstance(old_scores, list) or not old_scores:
         return
 
-    try:
-        with SessionLocal() as session:
-            if session.scalar(select(LeaderboardScore.id).limit(1)) is not None:
-                return
+    def do_migrate(session_factory):
+        try:
+            with session_factory() as session:
+                if session.scalar(select(LeaderboardScore.id).limit(1)) is not None:
+                    return
+                imported = []
+                for item in old_scores:
+                    if not isinstance(item, dict):
+                        continue
+                    try:
+                        s_val = int(item.get('score', 0))
+                        t_val = int(item.get('total', 10))
+                        raw_ms = item.get('time_ms')
+                        ms_val = int(raw_ms) if raw_ms not in (None, '') else None
+                    except (TypeError, ValueError):
+                        continue
+                    imported.append(LeaderboardScore(
+                        id=str(item.get('id') or uuid.uuid4()),
+                        name=str(item.get('name') or 'Student').strip()[:20] or 'Student',
+                        score=s_val,
+                        total=t_val,
+                        time=str(item.get('time') or '00:00.000'),
+                        time_ms=ms_val,
+                    ))
+                if imported:
+                    session.add_all(imported)
+                    session.commit()
+        except Exception:
+            pass
 
-            imported = []
-            for item in old_scores:
-                if not isinstance(item, dict):
-                    continue
-                try:
-                    score_value = int(item.get('score', 0))
-                    total_value = int(item.get('total', 10))
-                    raw_time_ms = item.get('time_ms')
-                    time_ms_value = int(raw_time_ms) if raw_time_ms not in (None, '') else None
-                except (TypeError, ValueError):
-                    continue
+    do_migrate(LocalSession)
+    if is_cloud_active and RemoteSession:
+        do_migrate(RemoteSession)
 
-                imported.append(LeaderboardScore(
-                    id=str(item.get('id') or uuid.uuid4()),
-                    name=str(item.get('name') or 'Student').strip()[:20] or 'Student',
-                    score=score_value,
-                    total=total_value,
-                    time=str(item.get('time') or '00:00.000'),
-                    time_ms=time_ms_value,
-                ))
-
-            if imported:
-                session.add_all(imported)
-                session.commit()
-    except IntegrityError:
-        with SessionLocal() as session:
-            session.rollback()
-    except SQLAlchemyError:
-        app.logger.exception('Could not migrate legacy scores.json into the database.')
-
-
-Base.metadata.create_all(engine)
 migrate_legacy_scores()
 
 
@@ -284,44 +338,75 @@ def submit_score():
         return jsonify({'error': 'Score, total, and time_ms cannot be negative.'}), 400
 
     player_name = str(req_data.get('name') or 'Student').strip()[:20] or 'Student'
-    new_score = LeaderboardScore(
-        id=str(uuid.uuid4()),
-        name=player_name,
-        score=score_value,
-        total=total_value,
-        time=str(req_data.get('time') or '00:00.000')[:32],
-        time_ms=time_ms_value,
-    )
+    score_id = str(uuid.uuid4())
+    time_str = str(req_data.get('time') or '00:00.000')[:32]
 
+    # 1. Always record in local SQLite (guaranteed offline fallback)
+    local_saved = False
+    local_position = 1
     try:
-        with SessionLocal() as session:
-            session.add(new_score)
-            session.commit()
-
-            sorted_scores = session.scalars(
-                select(LeaderboardScore).order_by(*leaderboard_order())
-            ).all()
-            position = next(
-                index for index, item in enumerate(sorted_scores, start=1)
-                if item.id == new_score.id
+        with LocalSession() as local_session:
+            local_entry = LeaderboardScore(
+                id=score_id,
+                name=player_name,
+                score=score_value,
+                total=total_value,
+                time=time_str,
+                time_ms=time_ms_value,
             )
+            local_session.add(local_entry)
+            local_session.commit()
+            all_local = local_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+            local_position = next((idx for idx, item in enumerate(all_local, start=1) if item.id == score_id), 1)
+            local_saved = True
+    except Exception as e:
+        app.logger.warning(f"Could not record score in local SQLite: {e}")
 
-        return jsonify({'success': True, 'position': position}), 200
-    except SQLAlchemyError:
-        app.logger.exception('Could not save leaderboard score.')
-        return jsonify({'error': 'Unable to save the score right now. Please try again.'}), 500
+    # 2. Try recording in remote cloud DB if available
+    if remote_engine and RemoteSession:
+        try:
+            with RemoteSession() as remote_session:
+                remote_entry = LeaderboardScore(
+                    id=score_id,
+                    name=player_name,
+                    score=score_value,
+                    total=total_value,
+                    time=time_str,
+                    time_ms=time_ms_value,
+                )
+                remote_session.add(remote_entry)
+                remote_session.commit()
+                all_remote = remote_session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+                remote_position = next((idx for idx, item in enumerate(all_remote, start=1) if item.id == score_id), 1)
+                return jsonify({'success': True, 'position': remote_position, 'storage': 'cloud'}), 200
+        except Exception as e:
+            app.logger.warning(f"Could not save score to cloud DB ({e}). Falling back to local standing.")
+
+    # 3. If local succeeded, return success
+    if local_saved:
+        return jsonify({'success': True, 'position': local_position, 'storage': 'local'}), 200
+
+    return jsonify({'error': 'Unable to save the score right now. Please try again.'}), 500
 
 
 @app.route('/api/scores', methods=['GET'])
 def get_scores():
+    # 1. Try cloud database first if configured
+    if remote_engine and RemoteSession:
+        try:
+            with RemoteSession() as session:
+                scores = session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
+                return jsonify([score_to_dict(score) for score in scores])
+        except Exception as e:
+            app.logger.warning(f"Cloud DB read error ({e}). Falling back to local SQLite.")
+
+    # 2. Seamless fallback to local SQLite
     try:
-        with SessionLocal() as session:
-            scores = session.scalars(
-                select(LeaderboardScore).order_by(*leaderboard_order())
-            ).all()
+        with LocalSession() as session:
+            scores = session.scalars(select(LeaderboardScore).order_by(*leaderboard_order())).all()
             return jsonify([score_to_dict(score) for score in scores])
     except SQLAlchemyError:
-        app.logger.exception('Could not load leaderboard scores.')
+        app.logger.exception('Could not load local leaderboard scores.')
         return jsonify({'error': 'Unable to load the leaderboard right now.'}), 500
 
 
